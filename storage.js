@@ -42,3 +42,27 @@ const storage = {
     localStorage.setItem(KEYS.sessions, JSON.stringify(sessions));
   },
 };
+
+// 今日已读毫秒数(按 session.startTime 的本地日期归属)
+// 包含正在进行的 session(如果 currentSession 传进来)
+function getTodayMs(currentSession = null) {
+  const todayStart = new Date().setHours(0, 0, 0, 0);
+
+  const historical = storage.getSessions()
+    .filter(s => s.startTime >= todayStart)
+    .reduce((sum, s) => sum + s.duration, 0);
+
+  const ongoing = currentSession && currentSession.startTime >= todayStart
+    ? Date.now() - currentSession.startTime
+    : 0;
+
+  return historical + ongoing;
+}
+
+function formatDuration(ms) {
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m} 分钟`;
+  return `${h} 小时 ${m} 分`;
+}

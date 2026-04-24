@@ -19,17 +19,32 @@
   <h1>Reading RPG</h1>
 
   <!-- 列表态 -->
-  <section id="listView">
-    <section id="bookList" class="book-list"></section>
-    <button id="addBookBtn" class="btn btn-primary">+ 添加书</button>
-  </section>
+<section id="listView">
+  <div id="todayStats" class="today-stats"></div>
+  <section id="bookList" class="book-list"></section>
+  <button id="addBookBtn" class="btn btn-primary">+ 添加书</button>
+  <section id="sessionList" class="session-list"></section>
+</section>
 
   <!-- 计时态 -->
-  <section id="timerView" class="hidden">
-    <div id="currentBookTitle" class="current-book"></div>
-    <div id="timer" class="timer">00:00</div>
-    <button id="stopBtn" class="btn btn-secondary">停止</button>
-  </section>
+<section id="timerView" class="hidden">
+  <div id="currentBookTitle" class="current-book"></div>
+  <div id="timer" class="timer">00:00</div>
+  <button id="stopBtn" class="btn btn-secondary">停止</button>
+</section>
+
+<section id="progressView" class="hidden">
+  <div id="progressBookTitle" class="current-book"></div>
+  <div id="progressDuration" class="progress-duration"></div>
+  <label class="progress-label">
+    读到多少 %?
+    <input type="number" id="progressPercent" min="0" max="100" placeholder="留空 = 不更新">
+  </label>
+  <div class="progress-actions">
+    <button id="skipProgressBtn" class="btn btn-secondary">跳过</button>
+    <button id="saveProgressBtn" class="btn btn-primary">保存</button>
+  </div>
+</section>
 </main>
 
   <!-- 添加书的 modal -->

@@ -188,3 +188,122 @@ h1 {
 }
 
 .btn-small:active { transform: scale(0.96); }
+
+.btn-delete {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 8px;
+  background: #374151;
+  color: #eaeaea;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-delete:active { transform: scale(0.96); }
+
+.today-stats {
+  font-size: 0.95rem;
+  opacity: 0.6;
+  margin-bottom: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.session-list {
+  width: 100%;
+  max-width: 500px;
+  margin-top: 2rem;
+}
+
+.section-title {
+  font-size: 0.85rem;
+  font-weight: 400;
+  opacity: 0.5;
+  text-align: left;
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.session-item {
+  background: #16213e;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.session-book {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-duration {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
+
+.session-time {
+  opacity: 0.4;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-book.deleted {
+  opacity: 0.4;
+  font-style: italic;
+}
+
+#progressView {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.progress-duration {
+  font-size: 1.1rem;
+  opacity: 0.6;
+  margin-bottom: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  opacity: 0.8;
+  text-align: left;
+}
+
+.progress-label input {
+  padding: 0.75rem;
+  font-size: 1.5rem;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #eaeaea;
+  -webkit-appearance: none;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.progress-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.progress-actions .btn {
+  flex: 1;
+  padding: 0.875rem;
+}
