@@ -1,0 +1,178 @@
+[1mdiff --git a/app.js b/app.js[m
+[1mindex e28bf02..fb98d69 100644[m
+[1m--- a/app.js[m
+[1m+++ b/app.js[m
+[36m@@ -1,10 +1,49 @@[m
+[32m+[m[32m// ===== DOM 引用 =====[m
+[32m+[m[32mconst listView = document.getElementById('listView');[m
+[32m+[m[32mconst timerView = document.getElementById('timerView');[m
+[32m+[m
+[32m+[m[32mconst bookListEl = document.getElementById('bookList');[m
+[32m+[m[32mconst addBookBtn = document.getElementById('addBookBtn');[m
+[32m+[m
+[32m+[m[32mconst currentBookTitleEl = document.getElementById('currentBookTitle');[m
+ const timerEl = document.getElementById('timer');[m
+[31m-const startBtn = document.getElementById('startBtn');[m
+ const stopBtn = document.getElementById('stopBtn');[m
+ [m
+[32m+[m[32mconst addBookModal = document.getElementById('addBookModal');[m
+[32m+[m[32mconst bookTitleInput = document.getElementById('bookTitle');[m
+[32m+[m[32mconst bookCoverInput = document.getElementById('bookCover');[m
+[32m+[m[32mconst bookPercentInput = document.getElementById('bookPercent');[m
+[32m+[m[32mconst saveBookBtn = document.getElementById('saveBookBtn');[m
+[32m+[m[32mconst cancelBookBtn = document.getElementById('cancelBookBtn');[m
+[32m+[m
+[32m+[m[32m// ===== 计时状态 =====[m
+[32m+[m[32mlet currentSession = null;  // { bookId, startTime } | null[m
+ let intervalId = null;[m
+[31m-let startTime = null;      // 本次"开始"按下的时刻[m
+[31m-let accumulated = 0;        // 之前累计的毫秒数(允许暂停续计)[m
+[32m+[m
+[32m+[m[32m// ===== 渲染 =====[m
+[32m+[m[32mfunction renderBooks() {[m
+[32m+[m[32m  const books = storage.getBooks();[m
+[32m+[m
+[32m+[m[32m  if (books.length === 0) {[m
+[32m+[m[32m    bookListEl.innerHTML = '<p style="opacity: 0.5; text-align: center;">还没有书,点下面按钮添加一本</p>';[m
+[32m+[m[32m    return;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  bookListEl.innerHTML = books.map(book => `[m
+[32m+[m[32m    <div class="book-item">[m
+[32m+[m[32m      <div class="book-title">${book.title}</div>[m
+[32m+[m[32m      <div class="book-meta">[m
+[32m+[m[32m        <span class="book-percent">${book.percent}%</span>[m
+[32m+[m[32m        <button class="btn-small" data-book-id="${book.id}">开始</button>[m
+[32m+[m[32m      </div>[m
+[32m+[m[32m    </div>[m
+[32m+[m[32m  `).join('');[m
+[32m+[m
+[32m+[m[32m  // 给所有"开始"按钮绑事件[m
+[32m+[m[32m  bookListEl.querySelectorAll('.btn-small').forEach(btn => {[m
+[32m+[m[32m    btn.addEventListener('click', () => startSession(btn.dataset.bookId));[m
+[32m+[m[32m  });[m
+[32m+[m[32m}[m
+ [m
+ function format(ms) {[m
+   const totalSec = Math.floor(ms / 1000);[m
+[36m@@ -13,31 +52,100 @@[m [mfunction format(ms) {[m
+   return `${m}:${s}`;[m
+ }[m
+ [m
+[31m-function render() {[m
+[31m-  const elapsed = accumulated + (startTime ? Date.now() - startTime : 0);[m
+[32m+[m[32mfunction renderTimer() {[m
+[32m+[m[32m  if (!currentSession) return;[m
+[32m+[m[32m  const elapsed = Date.now() - currentSession.startTime;[m
+   timerEl.textContent = format(elapsed);[m
+ }[m
+ [m
+[31m-function start() {[m
+[31m-  if (intervalId) return;             // 已在跑,忽略[m
+[31m-  startTime = Date.now();[m
+[31m-  intervalId = setInterval(render, 250);  // 每 250ms 刷新足够流畅[m
+[31m-  startBtn.disabled = true;[m
+[31m-  stopBtn.disabled = false;[m
+[32m+[m[32m// ===== Session =====[m
+[32m+[m[32mfunction startSession(bookId) {[m
+[32m+[m[32m  const book = storage.getBooks().find(b => b.id === bookId);[m
+[32m+[m[32m  if (!book) return;[m
+[32m+[m
+[32m+[m[32m  currentSession = { bookId, startTime: Date.now() };[m
+[32m+[m
+[32m+[m[32m  currentBookTitleEl.textContent = `📖 ${book.title}`;[m
+[32m+[m[32m  timerEl.textContent = '00:00';[m
+[32m+[m
+[32m+[m[32m  listView.classList.add('hidden');[m
+[32m+[m[32m  timerView.classList.remove('hidden');[m
+[32m+[m
+[32m+[m[32m  intervalId = setInterval(renderTimer, 250);[m
+ }[m
+ [m
+[31m-function stop() {[m
+[31m-  if (!intervalId) return;[m
+[32m+[m[32mfunction stopSession() {[m
+[32m+[m[32m  if (!currentSession) return;[m
+[32m+[m
+   clearInterval(intervalId);[m
+   intervalId = null;[m
+[31m-  accumulated += Date.now() - startTime;[m
+[31m-  startTime = null;[m
+[31m-  render();[m
+[31m-  startBtn.disabled = false;[m
+[31m-  stopBtn.disabled = true;[m
+[32m+[m
+[32m+[m[32m  const endTime = Date.now();[m
+[32m+[m[32m  const newSession = {[m
+[32m+[m[32m    id: uuid(),[m
+[32m+[m[32m    bookId: currentSession.bookId,[m
+[32m+[m[32m    startTime: currentSession.startTime,[m
+[32m+[m[32m    endTime,[m
+[32m+[m[32m    duration: endTime - currentSession.startTime,[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const sessions = storage.getSessions();[m
+[32m+[m[32m  sessions.push(newSession);[m
+[32m+[m[32m  storage.saveSessions(sessions);[m
+[32m+[m
+[32m+[m[32m  currentSession = null;[m
+[32m+[m
+[32m+[m[32m  timerView.classList.add('hidden');[m
+[32m+[m[32m  listView.classList.remove('hidden');[m
+[32m+[m[32m  renderBooks();[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// ===== Modal =====[m
+[32m+[m[32mfunction openModal() {[m
+[32m+[m[32m  addBookModal.classList.remove('hidden');[m
+[32m+[m[32m  bookTitleInput.focus();[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction closeModal() {[m
+[32m+[m[32m  addBookModal.classList.add('hidden');[m
+[32m+[m[32m  bookTitleInput.value = '';[m
+[32m+[m[32m  bookCoverInput.value = '';[m
+[32m+[m[32m  bookPercentInput.value = '0';[m
+ }[m
+ [m
+[31m-startBtn.addEventListener('click', start);[m
+[31m-stopBtn.addEventListener('click', stop);[m
+[32m+[m[32mfunction saveBook() {[m
+[32m+[m[32m  const title = bookTitleInput.value.trim();[m
+[32m+[m[32m  if (!title) {[m
+[32m+[m[32m    alert('请输入书名');[m
+[32m+[m[32m    return;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32mconst newBook = {[m
+[32m+[m[32m  id: uuid(),[m
+[32m+[m[32m  title,[m
+[32m+[m[32m  coverUrl: bookCoverInput.value.trim(),[m
+[32m+[m[32m  percent: Number(bookPercentInput.value) || 0,[m
+[32m+[m[32m  status: 'reading',        // ← 新增这行[m
+[32m+[m[32m  createdAt: Date.now(),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32m  const books = storage.getBooks();[m
+[32m+[m[32m  books.push(newBook);[m
+[32m+[m[32m  storage.saveBooks(books);[m
+[32m+[m
+[32m+[m[32m  closeModal();[m
+[32m+[m[32m  renderBooks();[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// ===== 事件绑定 =====[m
+[32m+[m[32maddBookBtn.addEventListener('click', openModal);[m
+[32m+[m[32mcancelBookBtn.addEventListener('click', closeModal);[m
+[32m+[m[32msaveBookBtn.addEventListener('click', saveBook);[m
+[32m+[m[32mstopBtn.addEventListener('click', stopSession);[m
+[32m+[m
+[32m+[m[32maddBookModal.addEventListener('click', (e) => {[m
+[32m+[m[32m  if (e.target === addBookModal) closeModal();[m
+[32m+[m[32m});[m
+ [m
+[31m-stopBtn.disabled = true;  // 初始状态[m
+\ No newline at end of file[m
+[32m+[m[32m// ===== 启动 =====[m
+[32m+[m[32mrenderBooks();[m
+\ No newline at end of file[m
