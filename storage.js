@@ -43,6 +43,52 @@ const storage = {
   },
 };
 
+// 导出:把所有数据打成一个 JSON 字符串
+function exportData() {
+  return JSON.stringify({
+    version: 1,
+    exportedAt: Date.now(),
+    books: storage.getBooks(),
+    sessions: storage.getSessions(),
+  }, null, 2);
+}
+
+// 导入:校验 + 覆盖写入
+// 返回 { ok: true, bookCount, sessionCount } 或 { ok: false, error }
+function importData(jsonString) {
+  let data;
+  try {
+    data = JSON.parse(jsonString);
+  } catch (e) {
+    return { ok: false, error: '文件不是合法的 JSON' };
+  }
+
+  if (!data || typeof data !== 'object') {
+    return { ok: false, error: '数据格式不对' };
+  }
+  if (!Array.isArray(data.books) || !Array.isArray(data.sessions)) {
+    return { ok: false, error: '缺少 books 或 sessions 字段' };
+  }
+
+  // 最低限度的字段校验:只检查 books 里每条有 id 和 title,
+  // sessions 每条有 id、bookId、startTime、duration
+  const booksOk = data.books.every(b =>
+    b && typeof b.id === 'string' && typeof b.title === 'string'
+  );
+  const sessionsOk = data.sessions.every(s =>
+    s && typeof s.id === 'string' && typeof s.bookId === 'string'
+    && typeof s.startTime === 'number' && typeof s.duration === 'number'
+  );
+  if (!booksOk || !sessionsOk) {
+    return { ok: false, error: '数据里有字段缺失或类型不对' };
+  }
+
+  storage.saveBooks(data.books);
+  storage.saveSessions(data.sessions);
+
+  return { ok: true, bookCount: data.books.length, sessionCount: data.sessions.length };
+}
+
 // 今日已读毫秒数(按 session.startTime 的本地日期归属)
 // 包含正在进行的 session(如果 currentSession 传进来)
 function getTodayMs(currentSession = null) {

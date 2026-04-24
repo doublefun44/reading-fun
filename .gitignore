@@ -1,0 +1,5 @@
+# 导出的数据文件,是个人数据不要进仓库
+reading-rpg-*.json
+
+# macOS 系统垃圾文件
+.DS_Store

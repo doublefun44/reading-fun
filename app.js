@@ -25,6 +25,9 @@ const progressPercentInput = document.getElementById('progressPercent');
 const saveProgressBtn = document.getElementById('saveProgressBtn');
 const skipProgressBtn = document.getElementById('skipProgressBtn');
 
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const importFileInput = document.getElementById('importFileInput');
 // ===== 计时状态 =====
 let currentSession = null;  // { bookId, startTime } | null
 let intervalId = null;
@@ -80,6 +83,52 @@ function formatSessionTime(ts) {
   return `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
 }
 
+
+// ===== 导出 / 导入 =====
+function doExport() {
+  const json = exportData();
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const date = new Date().toISOString().slice(0, 10); // "2026-04-24"
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reading-rpg-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function doImport(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const result = importData(e.target.result);
+    if (!result.ok) {
+      alert(`导入失败:${result.error}`);
+      return;
+    }
+    alert(`导入成功:${result.bookCount} 本书,${result.sessionCount} 条记录`);
+    renderBooks();
+  };
+  reader.onerror = () => alert('读取文件失败');
+  reader.readAsText(file);
+}
+
+exportBtn.addEventListener('click', doExport);
+
+importBtn.addEventListener('click', () => {
+  const ok = confirm('导入会覆盖现在所有的书和记录,确定继续吗?');
+  if (!ok) return;
+  importFileInput.click();
+});
+
+importFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) doImport(file);
+  // 清空 input,这样下次选同一个文件也能触发 change
+  e.target.value = '';
+});
 
 function renderBooks() {
   renderTodayStats(currentSession);

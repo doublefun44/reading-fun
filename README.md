@@ -13,6 +13,12 @@ VS Code 打开,Live Server 启动。
 - iPad 主屏图标改了 meta 后,要先从主屏移除再重新添加才更新
 - 计时用 Date.now() 差值,别用计数器
 - [x] Stage 2: 书 + session 数据模型,今日统计,历史列表,进度更新
+GitHub Pages 部署
+
+## 部署 Notes
+- GitHub Free 账号的 Private 仓库没有 Pages,要么改 Public 要么升 Pro
+- localStorage 绑 origin:Live Server 的 IP 和 Pages 的 HTTPS 是不同 origin,数据不互通
+- iPad 加到主屏后是独立 PWA 环境,它的 localStorage 和 Safari 里的也是分开的
 - [ ] Stage 3: ...
 
 
