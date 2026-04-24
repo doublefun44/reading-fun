@@ -1,0 +1,61 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  background: #1a1a2e;
+  color: #eaeaea;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* iPad 添加到主屏后,避开顶部刘海/状态栏 */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* 禁止长按选中文字和双击放大,更像原生 app */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.container {
+  text-align: center;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 300;
+  margin-bottom: 3rem;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+
+.timer {
+  font-size: 8rem;
+  font-weight: 200;
+  font-variant-numeric: tabular-nums; /* 数字等宽,跳动时不抖 */
+  margin-bottom: 3rem;
+  letter-spacing: 0.05em;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.btn {
+  padding: 1rem 2.5rem;
+  font-size: 1.125rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  /* iPad 点击无蓝色高亮 */
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, opacity 0.2s;
+}
+
+.btn:active { transform: scale(0.96); }
+
+.btn-primary { background: #4ade80; color: #0f172a; }
+.btn-secondary { background: #374151; color: #eaeaea; }
+
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
