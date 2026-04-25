@@ -5,8 +5,9 @@ const timerView = document.getElementById('timerView');
 const sessionListEl = document.getElementById('sessionList');
 
 const currentBookTitleEl = document.getElementById('currentBookTitle');
-const timerEl = document.getElementById('timer');
 const stopBtn = document.getElementById('stopBtn');
+const sandTopEl = document.getElementById('sandTop');
+const sandBottomEl = document.getElementById('sandBottom');
 
 const addBookModal = document.getElementById('addBookModal');
 const bookTitleInput = document.getElementById('bookTitle');
@@ -254,37 +255,59 @@ function doImport(file) {
   reader.readAsText(file);
 }
 
+// ===== 沙漏档位 =====
+// 每 10 分钟一档,30 分钟一循环
+// 上沙范围:y=40 到 y=150 (高度 110)
+// 下沙范围:y=170 到 y=280 (高度 110,从底往上堆)
+const HOURGLASS_STAGES = [
+  // 0-10 分钟:上满下空
+  { topY: 40, topH: 110, botY: 280, botH: 0   },
+  // 10-20 分钟:上 2/3,下 1/3
+  { topY: 40, topH: 73,  botY: 243, botH: 37  },
+  // 20-30 分钟:上 1/3,下 2/3
+  { topY: 40, topH: 37,  botY: 207, botH: 73  },
+];
+let currentStageIndex = -1;  // -1 表示还没渲染过,首次必更新
 
-// ===== 计时器 =====
-function format(ms) {
-  const totalSec = Math.floor(ms / 1000);
-  const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
-  const s = String(totalSec % 60).padStart(2, '0');
-  return `${m}:${s}`;
+function getStageIndex(elapsedMs) {
+  return Math.floor(elapsedMs / 600000) % 3;
 }
 
-function renderTimer() {
+function renderHourglass() {
   if (!currentSession) return;
   const elapsed = Date.now() - currentSession.startTime;
-  timerEl.textContent = format(elapsed);
+  const stage = getStageIndex(elapsed);
+
+  if (stage === currentStageIndex) return;  // 没换档,啥都不做
+  currentStageIndex = stage;
+
+  const s = HOURGLASS_STAGES[stage];
+  sandTopEl.setAttribute('y', s.topY);
+  sandTopEl.setAttribute('height', s.topH);
+  sandBottomEl.setAttribute('y', s.botY);
+  sandBottomEl.setAttribute('height', s.botH);
 }
 
 
 // ===== Session =====
-function startSession(bookId) {
+  function startSession(bookId) {
   const book = storage.getBooks().find(b => b.id === bookId);
   if (!book) return;
 
   currentSession = { bookId, startTime: Date.now() };
 
   currentBookTitleEl.textContent = `📖 ${book.title}`;
-  timerEl.textContent = '00:00';
 
   listView.classList.add('hidden');
   timerView.classList.remove('hidden');
 
-  intervalId = setInterval(renderTimer, 250);
+  // ↓↓↓ 新加这三行 ↓↓↓
+  currentStageIndex = -1;
+  renderHourglass();
+  intervalId = setInterval(renderHourglass, 1000);
 }
+
+
 
 function stopSession() {
   if (!currentSession) return;

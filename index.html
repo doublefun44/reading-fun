@@ -42,7 +42,97 @@
   <!-- 计时态 -->
 <section id="timerView" class="hidden">
   <div id="currentBookTitle" class="current-book"></div>
-  <div id="timer" class="timer">00:00</div>
+
+  <svg id="hourglass" class="hourglass" viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 木头渐变:深棕到稍亮的棕,模拟圆木的高光 -->
+    <linearGradient id="woodGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#3d2817" />
+      <stop offset="50%"  stop-color="#6b4423" />
+      <stop offset="100%" stop-color="#3d2817" />
+    </linearGradient>
+
+    <!-- 立柱用的窄渐变,跟横板区分一点 -->
+    <linearGradient id="pillarGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#2d1c0f" />
+      <stop offset="50%"  stop-color="#5a3818" />
+      <stop offset="100%" stop-color="#2d1c0f" />
+    </linearGradient>
+
+    <!-- 玻璃高光:从左上到右下的淡白 -->
+    <linearGradient id="glassHighlight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.18)" />
+      <stop offset="50%"  stop-color="rgba(255,255,255,0.02)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0.08)" />
+    </linearGradient>
+
+    <!-- 上半玻璃形状:外轮廓(梨形,上宽下窄到颈部) -->
+    <!-- 用 path 画曲线:从左上 → 右上 → 曲线收到颈部右 → 颈部左 → 曲线回到左上 -->
+    <path id="topGlassShape"
+      d="M 30,40
+         L 170,40
+         Q 170,90 110,150
+         L 90,150
+         Q 30,90 30,40 Z" />
+
+    <!-- 下半玻璃形状(上半镜像) -->
+    <path id="bottomGlassShape"
+      d="M 90,170
+         L 110,170
+         Q 170,230 170,280
+         L 30,280
+         Q 30,230 90,170 Z" />
+
+    <!-- 沙子被裁剪到玻璃形状内 -->
+    <clipPath id="topGlassClip">
+      <use href="#topGlassShape" />
+    </clipPath>
+    <clipPath id="bottomGlassClip">
+      <use href="#bottomGlassShape" />
+    </clipPath>
+  </defs>
+
+  <!-- ===== 木质底板(最底层) ===== -->
+  <!-- 顶板 -->
+  <rect x="10" y="10" width="180" height="24" rx="3" fill="url(#woodGradient)" />
+  <rect x="14" y="14" width="172" height="4" rx="2" fill="rgba(255,255,255,0.08)" />
+  <!-- 顶板装饰小条 -->
+  <rect x="20" y="32" width="160" height="6" rx="2" fill="#2d1c0f" />
+
+  <!-- 底板 -->
+  <rect x="20" y="282" width="160" height="6" rx="2" fill="#2d1c0f" />
+  <rect x="10" y="286" width="180" height="24" rx="3" fill="url(#woodGradient)" />
+  <rect x="14" y="304" width="172" height="4" rx="2" fill="rgba(0,0,0,0.3)" />
+
+  <!-- ===== 立柱 ===== -->
+  <rect x="14"  y="34" width="10" height="252" fill="url(#pillarGradient)" />
+  <rect x="176" y="34" width="10" height="252" fill="url(#pillarGradient)" />
+
+  <!-- ===== 玻璃容器(底色,放沙子之前) ===== -->
+  <use href="#topGlassShape"    fill="rgba(255,255,255,0.03)" />
+  <use href="#bottomGlassShape" fill="rgba(255,255,255,0.03)" />
+
+  <!-- ===== 沙子 ===== -->
+  <rect
+    id="sandTop"
+    class="sand"
+    x="30" y="40" width="140" height="110"
+    clip-path="url(#topGlassClip)" />
+
+  <rect
+    id="sandBottom"
+    class="sand"
+    x="30" y="280" width="140" height="0"
+    clip-path="url(#bottomGlassClip)" />
+
+  <!-- ===== 玻璃高光(覆盖在沙子之上,营造"沙子在玻璃后面"的感觉) ===== -->
+  <use href="#topGlassShape"    fill="url(#glassHighlight)" pointer-events="none" />
+  <use href="#bottomGlassShape" fill="url(#glassHighlight)" pointer-events="none" />
+
+  <!-- ===== 玻璃描边 ===== -->
+  <use href="#topGlassShape"    fill="none" stroke="rgba(234,234,234,0.25)" stroke-width="1" />
+  <use href="#bottomGlassShape" fill="none" stroke="rgba(234,234,234,0.25)" stroke-width="1" />
+</svg>
   <button id="stopBtn" class="btn btn-secondary">停止</button>
 </section>
 

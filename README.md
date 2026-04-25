@@ -30,6 +30,24 @@ GitHub Pages 部署
 - Streak 门槛:一天 ≥10 分钟才算,昨天读了今天没读不算断
 - calcTotalXp 暂时是孤儿函数,UI 不显示总 XP(怕稀释"和书的关系")
 
+- [x] Stage 4-a: 计时态沙漏(木框+曲线玻璃+档位沙子)
+
+## 沙漏 Notes
+- 30 分钟一循环,每 10 分钟切一档(满/2:1/1:2)
+- 30 分钟整时直接归位回"满",不做翻转
+- 档位由 1 秒 interval 检查,只在变化时改 DOM,CSS transition 柔化
+- 调试改 getStageIndex 里 600000 → 10000(10 秒一档),测完记得改回
+- 颜色/比例之后想调:SVG defs 里的 woodGradient / pillarGradient / glassHighlight
+## Stage 4 决策 Notes
+原计划:沙漏 + 每分钟时长 + 30秒变暗 + 1秒沉底 + 切出检测
+实际只做了沙漏。理由:
+- 每分钟时长/沉底动画:体验加分有限,沙漏档位切换已经够反馈
+- 30 秒变暗:Web 改不了系统亮度,只能盖 opacity,iPad 阅读时
+  反而干扰看时长,弊大于利
+- 切出检测:实际场景是 Kindle 读书 + iPad PWA 常驻,不会切出。
+  以后真用 iPad 读书再加(用 Page Visibility API,5 分钟阈值,
+  回来时让用户决定算/不算)
+
 
 - percent 是 source of truth,将来加纸质书页数模式时:
   加 mode/totalPages/currentPage 字段,页数模式下用 
