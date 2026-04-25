@@ -48,6 +48,20 @@ GitHub Pages 部署
   以后真用 iPad 读书再加(用 Page Visibility API,5 分钟阈值,
   回来时让用户决定算/不算)
 
+- [x] Stage 5: 管理书籍页 + 详情页 + 完读/弃读流程 + 拔掉 XP
+
+## Stage 5 Notes
+- 字段:coverUrl 拿掉,加了 author / translator / status / finishedAt / abandonReason
+- 三种 status:reading / finished / abandoned。老数据没字段时默认 reading
+- 完读两个入口:详情页"完读"按钮 + 结算页跨 100% 自动完读,都走"📖 读完了"层
+- 弃读:详情页按钮 → sheet 选原因(5 选 1)→ 写 abandonReason → 关 sheet 刷详情
+  - "其他"选了才出现输入框,留空可提交;切走再切回 value 还在
+  - 不做反馈层:弃读不该被庆祝,选完直接静默回详情页就是反馈
+  - percent 故意不动,跟"重新开始读"对称
+- 选书 sheet 只列 status='reading' 的书。全告一段落时给"没有在读的书 / 添加新书"
+- 拔掉 XP 系统:理由是 XP 把"和书的关系"稀释成数字游戏。
+  结算页第二层现在是"今天累计 X" + 可选里程碑,不计分
+
 
 - percent 是 source of truth,将来加纸质书页数模式时:
   加 mode/totalPages/currentPage 字段,页数模式下用 

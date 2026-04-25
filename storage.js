@@ -113,96 +113,42 @@ function formatDuration(ms) {
   return `${h} 小时 ${m} 分`;
 }
 
-// ===== XP 计算 =====
-// 规则:
-//   1 分钟 = 2 XP(按毫秒精确计算,不取整)
-//   单次 ≥25 分钟 +20(每个 session 最多奖一次)
-//   当日总时长首次跨过 60 分钟 +50(每天最多一次)
-//   完读一本 +500(percent 从 <100 升到 100 时给)
-
-const XP = {
-  PER_MINUTE: 2,
-  SESSION_25MIN: 20,
-  DAILY_60MIN: 50,
-  FINISH_BOOK: 500,
-};
-
 const STREAK = {
   MIN_MS_PER_DAY: 10 * 60000, // 一天读够 10 分钟才算 streak +1
 };
 
-// 单次 session 的基础 XP(分钟数 × 2,不含奖励)
-function calcSessionBaseXp(durationMs) {
-  return Math.floor((durationMs / 60000) * XP.PER_MINUTE);
-}
-
-// 给一次结算算 XP 明细
+// ===== 结算页第二层:今日累计 + 里程碑 =====
+// 不计分,只用文字反馈"读了多少"和"跨过了什么门槛"
+//
 // 入参:
-//   session     刚结束的 session 对象 { startTime, duration, ... }
-//   todayMsBefore  这次 session 之前,今日已读毫秒数(不含本次)
-//   percentBefore  这次开始时书的进度
-//   percentAfter   这次结算后书的进度(用户没改就 = before)
-// 出参:[{ label, xp }, ...] 顺序就是结算页跳动的顺序
-function calcSessionXp({ session, todayMsBefore, percentBefore, percentAfter }) {
-  const items = [];
+//   session         刚结束的 session 对象 { startTime, duration, ... }
+//   todayMsBefore   这次 session 之前,今日已读毫秒数(不含本次)
+// 出参:
+//   {
+//     todayText:    "今天累计 1 小时 12 分钟"
+//     milestone:    "跨过一小时了" | "专注了 28 分钟" | null
+//   }
+//
+// 规则:
+//   - todayText 永远显示
+//   - milestone 优先级:今日跨 60 分钟 > 单次 ≥25 分钟 > 无
+//     (跨小时是更稀有的事件,优先它)
+function getRecapMilestones({ session, todayMsBefore }) {
+  const todayMsAfter = todayMsBefore + session.duration;
+  const todayText = `今天累计 ${formatDuration(todayMsAfter)}`;
 
-  const baseXp = calcSessionBaseXp(session.duration);
-  const minutes = Math.floor(session.duration / 60000);
-  items.push({ label: `阅读 ${minutes} 分钟`, xp: baseXp });
-
-  // 单次 ≥25 分钟
-  if (session.duration >= 25 * 60000) {
-    items.push({ label: '专注 25 分钟', xp: XP.SESSION_25MIN });
-  }
+  let milestone = null;
 
   // 今日累计首次跨过 60 分钟
-  const todayMsAfter = todayMsBefore + session.duration;
   if (todayMsBefore < 60 * 60000 && todayMsAfter >= 60 * 60000) {
-    items.push({ label: '今日累计 60 分钟', xp: XP.DAILY_60MIN });
+    milestone = '跨过一小时了';
+  } else if (session.duration >= 25 * 60000) {
+    // 单次 ≥25 分钟(每次只要够 25 分钟就提一句,不做"每次只奖一次")
+    const minutes = Math.floor(session.duration / 60000);
+    milestone = `专注了 ${minutes} 分钟`;
   }
 
-  // 完读
-  if (percentBefore < 100 && percentAfter >= 100) {
-    items.push({ label: '读完整本书', xp: XP.FINISH_BOOK });
-  }
-
-  return items;
-}
-
-// 历史总 XP(派生,不存)
-// 注意:这里不算"完读 +500",因为完读事件没存在 session 上
-// 完读 XP 只在结算页那一次显示,要进总分得另外存(以后再说)
-// 现在先返回基础 + session 阈值奖励的总和
-function calcTotalXp() {
-  let total = 0;
-
-  // 完读 XP:每本有 finishedAt 的书 +500
-  const books = storage.getBooks();
-  for (const b of books) {
-    if (b.finishedAt) total += XP.FINISH_BOOK;
-  }
-
-  // session 相关 XP
-  const sessions = storage.getSessions();
-  if (sessions.length === 0) return total;
-
-  const sorted = [...sessions].sort((a, b) => a.startTime - b.startTime);
-  const dailyMs = {};
-
-  for (const s of sorted) {
-    total += calcSessionBaseXp(s.duration);
-    if (s.duration >= 25 * 60000) total += XP.SESSION_25MIN;
-
-    const dateKey = new Date(s.startTime).toLocaleDateString('sv');
-    const before = dailyMs[dateKey] || 0;
-    const after = before + s.duration;
-    if (before < 60 * 60000 && after >= 60 * 60000) {
-      total += XP.DAILY_60MIN;
-    }
-    dailyMs[dateKey] = after;
-  }
-
-  return total;
+  return { todayText, milestone };
 }
 
 // ===== Streak 计算 =====
