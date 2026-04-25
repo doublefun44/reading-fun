@@ -112,3 +112,184 @@ function formatDuration(ms) {
   if (h === 0) return `${m} 分钟`;
   return `${h} 小时 ${m} 分`;
 }
+
+// ===== XP 计算 =====
+// 规则:
+//   1 分钟 = 2 XP(按毫秒精确计算,不取整)
+//   单次 ≥25 分钟 +20(每个 session 最多奖一次)
+//   当日总时长首次跨过 60 分钟 +50(每天最多一次)
+//   完读一本 +500(percent 从 <100 升到 100 时给)
+
+const XP = {
+  PER_MINUTE: 2,
+  SESSION_25MIN: 20,
+  DAILY_60MIN: 50,
+  FINISH_BOOK: 500,
+};
+
+const STREAK = {
+  MIN_MS_PER_DAY: 10 * 60000, // 一天读够 10 分钟才算 streak +1
+};
+
+// 单次 session 的基础 XP(分钟数 × 2,不含奖励)
+function calcSessionBaseXp(durationMs) {
+  return Math.floor((durationMs / 60000) * XP.PER_MINUTE);
+}
+
+// 给一次结算算 XP 明细
+// 入参:
+//   session     刚结束的 session 对象 { startTime, duration, ... }
+//   todayMsBefore  这次 session 之前,今日已读毫秒数(不含本次)
+//   percentBefore  这次开始时书的进度
+//   percentAfter   这次结算后书的进度(用户没改就 = before)
+// 出参:[{ label, xp }, ...] 顺序就是结算页跳动的顺序
+function calcSessionXp({ session, todayMsBefore, percentBefore, percentAfter }) {
+  const items = [];
+
+  const baseXp = calcSessionBaseXp(session.duration);
+  const minutes = Math.floor(session.duration / 60000);
+  items.push({ label: `阅读 ${minutes} 分钟`, xp: baseXp });
+
+  // 单次 ≥25 分钟
+  if (session.duration >= 25 * 60000) {
+    items.push({ label: '专注 25 分钟', xp: XP.SESSION_25MIN });
+  }
+
+  // 今日累计首次跨过 60 分钟
+  const todayMsAfter = todayMsBefore + session.duration;
+  if (todayMsBefore < 60 * 60000 && todayMsAfter >= 60 * 60000) {
+    items.push({ label: '今日累计 60 分钟', xp: XP.DAILY_60MIN });
+  }
+
+  // 完读
+  if (percentBefore < 100 && percentAfter >= 100) {
+    items.push({ label: '读完整本书', xp: XP.FINISH_BOOK });
+  }
+
+  return items;
+}
+
+// 历史总 XP(派生,不存)
+// 注意:这里不算"完读 +500",因为完读事件没存在 session 上
+// 完读 XP 只在结算页那一次显示,要进总分得另外存(以后再说)
+// 现在先返回基础 + session 阈值奖励的总和
+function calcTotalXp() {
+  let total = 0;
+
+  // 完读 XP:每本有 finishedAt 的书 +500
+  const books = storage.getBooks();
+  for (const b of books) {
+    if (b.finishedAt) total += XP.FINISH_BOOK;
+  }
+
+  // session 相关 XP
+  const sessions = storage.getSessions();
+  if (sessions.length === 0) return total;
+
+  const sorted = [...sessions].sort((a, b) => a.startTime - b.startTime);
+  const dailyMs = {};
+
+  for (const s of sorted) {
+    total += calcSessionBaseXp(s.duration);
+    if (s.duration >= 25 * 60000) total += XP.SESSION_25MIN;
+
+    const dateKey = new Date(s.startTime).toLocaleDateString('sv');
+    const before = dailyMs[dateKey] || 0;
+    const after = before + s.duration;
+    if (before < 60 * 60000 && after >= 60 * 60000) {
+      total += XP.DAILY_60MIN;
+    }
+    dailyMs[dateKey] = after;
+  }
+
+  return total;
+}
+
+// ===== Streak 计算 =====
+// 规则:
+//   一天里只要有任何 session(duration > 0)就算"读了"
+//   连续天数 = 从今天往前数,第一个"没读"之前连了多少天
+//   今天没读但昨天读了:streak 还是昨天的连数(还没断)
+//   今天没读且昨天也没读:streak = 0
+// 把 sessions 按本地日期分组,返回每天的累计毫秒数
+// 返回 { '2026-04-24': 1234567, ... }
+function getDailyMsMap() {
+  const map = {};
+  for (const s of storage.getSessions()) {
+    const key = new Date(s.startTime).toLocaleDateString('sv');
+    map[key] = (map[key] || 0) + s.duration;
+  }
+  return map;
+}
+
+// 某一天是否达到 streak 门槛
+function dayQualifies(dailyMsMap, dateKey) {
+  return (dailyMsMap[dateKey] || 0) >= STREAK.MIN_MS_PER_DAY;
+}
+
+
+function calcStreak() {
+  const sessions = storage.getSessions();
+  if (sessions.length === 0) return 0;
+
+  const dailyMs = getDailyMsMap();
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let cursor = new Date(today);
+
+  // 今天没达标:从昨天开始数(给宽限)
+  if (!dayQualifies(dailyMs, cursor.toLocaleDateString('sv'))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  let streak = 0;
+  while (dayQualifies(dailyMs, cursor.toLocaleDateString('sv'))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+}
+
+// 今天是否已经达到 streak 门槛
+function hasReadToday() {
+  const todayKey = new Date().toLocaleDateString('sv');
+  return dayQualifies(getDailyMsMap(), todayKey);
+}
+
+// 给结算页用:这次阅读对 streak 做了什么
+// 入参:
+//   todayMsBefore   这次 session 之前,今日已读毫秒数(不含本次)
+//   sessionDuration 这次 session 的毫秒数
+// 出参:
+//   {
+//     status: 'crossed' | 'maintained' | 'short',
+//     streak: 当前 streak(含今天,如果今天达标了)
+//     shortBy: 还差几毫秒到门槛(只在 status='short' 时有意义)
+//   }
+function getRecapStreakState({ todayMsBefore, sessionDuration }) {
+  const threshold = STREAK.MIN_MS_PER_DAY;
+  const todayMsAfter = todayMsBefore + sessionDuration;
+
+  // 注意:这函数应该在 session 已经存进 storage 之后调用,
+  // 这样 calcStreak() 看到的就是包含本次的最新状态
+  const streak = calcStreak();
+
+  if (todayMsAfter < threshold) {
+    return {
+      status: 'short',
+      streak,
+      shortBy: threshold - todayMsAfter,
+    };
+  }
+
+  if (todayMsBefore < threshold) {
+    // 今天首次跨过门槛
+    return { status: 'crossed', streak, shortBy: 0 };
+  }
+
+  // 今天之前就够了,这次是加码
+  return { status: 'maintained', streak, shortBy: 0 };
+}

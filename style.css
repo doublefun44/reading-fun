@@ -327,3 +327,460 @@ h1 {
   flex: 1;
   padding: 0.875rem;
 }
+
+/* ===== 结算页 ===== */
+#progressView {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+
+.recap-layer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  /* 给后续两层渐入做准备 */
+  animation: recapFadeIn 0.4s ease-out;
+}
+
+@keyframes recapFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.recap-duration {
+  font-size: 2.5rem;
+  font-weight: 200;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.recap-book {
+  font-size: 1.1rem;
+  opacity: 0.6;
+}
+
+.recap-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.5rem;
+}
+
+.recap-percent-before {
+  opacity: 0.5;
+}
+
+.recap-arrow {
+  opacity: 0.4;
+  font-size: 1.25rem;
+}
+
+.recap-percent-input {
+  width: 5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #eaeaea;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.recap-percent-input::-webkit-outer-spin-button,
+.recap-percent-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.recap-percent-unit {
+  opacity: 0.5;
+}
+
+.recap-actions {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 1rem;
+}
+
+.recap-actions .btn {
+  flex: 1;
+  padding: 0.875rem;
+}
+
+/* ===== 结算页 - XP 层 ===== */
+.recap-xp-layer {
+  gap: 0.5rem;
+  /* 覆盖默认的 fadeIn,这一层我们想要它先空着,内容自己一条条出 */
+  animation: none;
+}
+
+.recap-xp-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recap-xp-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.6rem 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  font-size: 1rem;
+  opacity: 0;
+  transform: translateY(6px);
+  animation: xpItemIn 0.35s ease-out forwards;
+}
+
+@keyframes xpItemIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.recap-xp-label {
+  opacity: 0.85;
+}
+
+.recap-xp-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: #4ade80;
+}
+
+.recap-xp-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  animation: xpItemIn 0.4s ease-out forwards;
+}
+
+.recap-xp-total-label {
+  font-size: 0.85rem;
+  opacity: 0.5;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.recap-xp-total-value {
+  font-size: 1.75rem;
+  font-weight: 300;
+  color: #4ade80;
+}
+
+.recap-xp-total-unit {
+  font-size: 0.9rem;
+  opacity: 0.5;
+}
+
+/* ===== 结算页 - Streak 层 ===== */
+.recap-streak-layer {
+  gap: 0.75rem;
+  /* 跟 XP 层一样,内容由 JS 控制何时出现,初始不要自带 fadeIn */
+  animation: none;
+}
+
+.recap-streak-icon {
+  font-size: 4rem;
+  line-height: 1;
+  /* 默认状态:静止,等 JS 加 class 触发动画 */
+  filter: grayscale(0);
+  transition: filter 0.4s;
+}
+
+.recap-streak-icon.flicker {
+  /* 跨过门槛:火苗轻微跳动 */
+  animation: streakFlicker 1.6s ease-in-out infinite;
+}
+
+.recap-streak-icon.dim {
+  /* 没达标:灰一点 */
+  filter: grayscale(0.7);
+  opacity: 0.6;
+}
+
+@keyframes streakFlicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); }
+  50%      { transform: scale(1.08) rotate(1deg); }
+}
+
+.recap-streak-main {
+  font-size: 1.5rem;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.recap-streak-sub {
+  font-size: 0.95rem;
+  opacity: 0.5;
+}
+
+/* ===== 首页 Streak 环 ===== */
+#listView {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 500px;
+}
+
+@property --progress {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.streak-ring {
+  /* 用 conic-gradient 画进度弧,中间用 ::before 挖空成环 */
+  --size: 200px;
+  --thickness: 14px;
+  --progress: 0deg;             /* 0~360,JS 写入 */
+  --ring-color: #4ade80;        /* 默认绿,empty 状态会被覆盖 */
+  --ring-track: rgba(255, 255, 255, 0.08);
+  --ring-bg: #1a1a2e;           /* 跟 body 一致,把中间挖回背景色 */
+
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background:
+    conic-gradient(
+      var(--ring-color) var(--progress),
+      var(--ring-track) var(--progress)
+    );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1.5rem 0 1rem;
+  transition: --progress 0.6s ease-out;
+}
+
+/* 中间挖个圆,造出"环" */
+.streak-ring-inner {
+  width: calc(var(--size) - var(--thickness) * 2);
+  height: calc(var(--size) - var(--thickness) * 2);
+  border-radius: 50%;
+  background: var(--ring-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.streak-ring-number {
+  font-size: 3.5rem;
+  font-weight: 200;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.streak-ring-label {
+  font-size: 0.85rem;
+  opacity: 0.5;
+  letter-spacing: 0.05em;
+}
+
+/* empty 状态:环只有底色,中间是灰木头 */
+.streak-ring.is-empty {
+  --progress: 0deg;
+}
+.streak-ring.is-empty .streak-ring-number {
+  font-size: 3rem;        /* emoji 不需要那么大 */
+  font-weight: 400;
+  filter: grayscale(0.7);
+  opacity: 0.7;
+}
+.streak-ring.is-empty .streak-ring-label {
+  display: none;
+}
+
+/* empty + 有 streak:暗火,比木桩亮一点,看起来还活着 */
+.streak-ring.is-empty.has-flame .streak-ring-number {
+  filter: grayscale(0.3);
+  opacity: 0.85;
+}
+
+/* done 状态:环走满,中间数字加一点呼吸 */
+.streak-ring.is-done {
+  --ring-color: #4ade80;
+}
+
+/* short 状态:环走到一部分,颜色稍暗 */
+.streak-ring.is-short {
+  --ring-color: #fbbf24;  /* 琥珀色,在路上但还没到 */
+}
+
+.streak-ring-hint {
+  font-size: 0.9rem;
+  opacity: 0.55;
+  margin-bottom: 2rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  min-height: 1.2em;     /* 占位,empty 状态没文案时别让布局跳 */
+}
+
+/* 大号主行动按钮 */
+.btn-hero {
+  width: 100%;
+  max-width: 320px;
+  padding: 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+/* 次级文字按钮(管理书籍) */
+.btn-text-line {
+  background: none;
+  border: none;
+  color: #eaeaea;
+  opacity: 0.5;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  margin-bottom: 0.5rem;
+}
+.btn-text-line:active { opacity: 0.8; }
+
+/* ===== 选书 sheet ===== */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.sheet.hidden {
+  display: none;
+}
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.25s ease-out;
+  pointer-events: auto;
+}
+
+.sheet.active .sheet-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.sheet-panel {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  background: #16213e;
+  border-radius: 20px 20px 0 0;
+  padding: 0.75rem 1.25rem 2rem;
+  /* 加上 safe-area-inset-bottom,iPad 主屏 PWA 下面有手势条 */
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+  transform: translateY(100%);
+  transition: transform 0.25s ease-out;
+  pointer-events: auto;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.sheet.active .sheet-panel {
+  transform: translateY(0);
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 0 auto 1rem;
+}
+
+.sheet-title {
+  font-size: 1.25rem;
+  font-weight: 300;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+}
+
+/* sheet 里的书列表 */
+.book-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.book-picker-item {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #eaeaea;
+  font-size: 1.05rem;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.book-picker-item:active {
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(0.98);
+}
+
+.book-picker-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 1rem;
+}
+
+.book-picker-percent {
+  opacity: 0.5;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.book-picker-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.book-picker-empty p {
+  opacity: 0.5;
+  font-size: 1rem;
+}

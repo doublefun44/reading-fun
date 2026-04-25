@@ -18,16 +18,24 @@
 <main class="container">
   <h1>Reading RPG</h1>
 
-  <!-- 列表态 -->
+<!-- 列表态 -->
 <section id="listView">
-  <div id="todayStats" class="today-stats"></div>
-  <section id="bookList" class="book-list"></section>
-  <button id="addBookBtn" class="btn btn-primary">+ 添加书</button>
+  <div id="streakRing" class="streak-ring">
+    <div class="streak-ring-inner">
+      <div class="streak-ring-number" id="streakRingNumber">0</div>
+      <div class="streak-ring-label" id="streakRingLabel">连续</div>
+    </div>
+  </div>
+  <div id="streakRingHint" class="streak-ring-hint"></div>
+
+  <button id="startReadingBtn" class="btn btn-primary btn-hero">开始阅读</button>
+  <button id="manageBooksBtn" class="btn-text btn-text-line">管理书籍</button>
+
   <div class="data-actions">
-  <button id="exportBtn" class="btn-text">导出</button>
-  <button id="importBtn" class="btn-text">导入</button>
-  <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
-</div>
+    <button id="exportBtn" class="btn-text">导出</button>
+    <button id="importBtn" class="btn-text">导入</button>
+    <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
+  </div>
   <section id="sessionList" class="session-list"></section>
 </section>
 
@@ -39,18 +47,60 @@
 </section>
 
 <section id="progressView" class="hidden">
-  <div id="progressBookTitle" class="current-book"></div>
-  <div id="progressDuration" class="progress-duration"></div>
-  <label class="progress-label">
-    读到多少 %?
-    <input type="number" id="progressPercent" min="0" max="100" placeholder="留空 = 不更新">
-  </label>
-  <div class="progress-actions">
+  <!-- 第一层:这次读了什么 -->
+  <div class="recap-layer">
+    <div class="recap-duration" id="recapDuration"></div>
+    <div class="recap-book" id="recapBook"></div>
+
+    <div class="recap-progress">
+      <span class="recap-percent-before" id="recapPercentBefore"></span>
+      <span class="recap-arrow">→</span>
+      <input
+        type="number"
+        id="recapPercentAfter"
+        class="recap-percent-input"
+        min="0"
+        max="100"
+        inputmode="numeric"
+      >
+      <span class="recap-percent-unit">%</span>
+    </div>
+  </div>
+
+  <!-- 第二层占位:XP(下一步填) -->
+  <div class="recap-layer recap-xp-layer hidden" id="recapXpLayer">
+  <ul class="recap-xp-list" id="recapXpList"></ul>
+  <div class="recap-xp-total hidden" id="recapXpTotal">
+    <span class="recap-xp-total-label">本次</span>
+    <span class="recap-xp-total-value" id="recapXpTotalValue">+0</span>
+    <span class="recap-xp-total-unit">XP</span>
+  </div>
+</div>
+
+  <!-- 第三层:Streak 火苗 -->
+<div class="recap-layer recap-streak-layer hidden" id="recapStreakLayer">
+  <div class="recap-streak-icon" id="recapStreakIcon">🔥</div>
+  <div class="recap-streak-main" id="recapStreakMain"></div>
+  <div class="recap-streak-sub" id="recapStreakSub"></div>
+</div>
+
+  <div class="recap-actions">
     <button id="skipProgressBtn" class="btn btn-secondary">跳过</button>
-    <button id="saveProgressBtn" class="btn btn-primary">保存</button>
+    <button id="saveProgressBtn" class="btn btn-primary">完成</button>
   </div>
 </section>
+<!-- 选书层(sheet) -->
+  <div id="bookPickerSheet" class="sheet hidden">
+    <div class="sheet-backdrop"></div>
+    <div class="sheet-panel">
+      <div class="sheet-handle"></div>
+      <h2 class="sheet-title">读哪本?</h2>
+      <div id="bookPickerList" class="book-picker-list"></div>
+    </div>
+  </div>
 </main>
+
+
 
   <!-- 添加书的 modal -->
   <div id="addBookModal" class="modal hidden">
