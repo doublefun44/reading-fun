@@ -320,7 +320,7 @@ function renderStreakRing() {
 function renderSessionHistory() {
   const sessions = storage.getSessions()
     .sort((a, b) => b.startTime - a.startTime)
-    .slice(0, 10);
+    .slice(0, 3);
 
   if (sessions.length === 0) {
     sessionListEl.innerHTML = '';
@@ -756,7 +756,8 @@ function stopSession() {
   recapDurationEl.textContent = formatDuration(duration);
   recapBookEl.textContent = `《${book.title}》`;
   recapPercentBeforeEl.textContent = `${book.percent}`;
-  recapPercentAfterInput.value = book.percent;
+  recapPercentAfterInput.value = '';
+  recapPercentAfterInput.placeholder = book.percent;
   recapPercentAfterInput.disabled = false;
 
   timerView.classList.add('hidden');
