@@ -306,13 +306,66 @@ function confirmAbandon() {
 //   empty  - 今天还没读(todayMs < 60000)
 //   short  - 今天读了一些但还不够 10 分钟
 //   done   - 今天已经读够 10 分钟
+//
+// 关于"熄灭"动画:
+//   用户隔了几天回来打开 PWA,如果上次还有火、这次该灭了,播一段动画 + 文案。
+//   一次性事件:播完就清掉标记,下次打开只是平静的木桩。
+//
+//   两个 localStorage key:
+//     rpg.lastFlameDate    上次显示火焰那天的本地日期 'YYYY-MM-DD'
+//     rpg.lastFlameStreak  上次显示火焰时的 streak 数(用于文案"上次连续 N 天")
+const FLAME_DATE_KEY = 'rpg.lastFlameDate';
+const FLAME_STREAK_KEY = 'rpg.lastFlameStreak';
+
+// 同步触发熄灭动画。播完 1.6s 后清掉 class、把 emoji 换成稳定状态。
+// 中途 ~1.0s 时把 🔥 换成 🪵(衔接 keyframes 里 60→62% 那一帧的透明窗口)
+function playExtinguishAnimation() {
+  streakRingEl.classList.add('is-extinguishing');
+  // 60% × 1.6s ≈ 0.96s,那一瞬切 emoji,既不会被看到"硬切",也对得上动画时序
+  setTimeout(() => {
+    streakRingNumberEl.textContent = '🪵';
+  }, 1000);
+  // 动画跑完,移掉 class,定格普通的 is-empty 木桩样式
+  setTimeout(() => {
+    streakRingEl.classList.remove('is-extinguishing');
+  }, 1600);
+}
+
 function renderStreakRing() {
   const streak = calcStreak();
   const todayMs = getTodayMs(currentSession);
   const threshold = 10 * 60000;
 
-  // 清掉之前的状态 class
-  streakRingEl.classList.remove('is-empty', 'is-short', 'is-done', 'has-flame');
+  // 这次"应不应该有火":今天达标 || streak > 0(火苗续命中)
+  const hasFlameNow = todayMs >= threshold || streak > 0;
+  const todayKey = new Date().toLocaleDateString('sv');
+
+  // 检测熄灭事件:上次有火、这次没火、且不是同一天
+  // 同一天不触发——避免在结算页回来这种短间隔里误触发
+  const lastFlameDate = localStorage.getItem(FLAME_DATE_KEY);
+  const lastFlameStreak = Number(localStorage.getItem(FLAME_STREAK_KEY)) || 0;
+  const shouldExtinguish = !hasFlameNow && lastFlameDate && lastFlameDate !== todayKey;
+
+  // 算"几天没读"用于文案:今天 - lastFlameDate
+  let daysSince = 0;
+  if (shouldExtinguish) {
+    const lastDate = new Date(lastFlameDate + 'T00:00:00');
+    const today = new Date(todayKey + 'T00:00:00');
+    daysSince = Math.round((today - lastDate) / (24 * 60 * 60 * 1000));
+  }
+
+  // 更新"上次有火"的记录:这次有火就盖今天,这次没火就清掉(不管熄不熄都得清,免得反复播)
+  if (hasFlameNow) {
+    localStorage.setItem(FLAME_DATE_KEY, todayKey);
+    localStorage.setItem(FLAME_STREAK_KEY, String(streak));
+  } else {
+    localStorage.removeItem(FLAME_DATE_KEY);
+    localStorage.removeItem(FLAME_STREAK_KEY);
+  }
+
+  // 清掉之前的状态 class(包括上一帧可能留下的熄灭动画 class)
+  streakRingEl.classList.remove('is-empty', 'is-short', 'is-done', 'has-flame', 'is-extinguishing');
+  streakRingHintEl.classList.remove('is-extinguish-msg');
 
 if (todayMs >= threshold) {
   // done:今天达标,木桩点燃成火焰。streak 数字挪到 hint 里
@@ -352,13 +405,24 @@ if (todayMs >= threshold) {
   streakRingEl.style.setProperty('--progress', '0deg');
   streakRingLabelEl.style.display = 'none';
 
+  if (shouldExtinguish) {
+    // 熄灭事件:用户隔了几天回来,上次还有火,这次该灭了。播一段动画交代清楚
+    // 动画起点是 🔥,动画中段(~1s)JS 会把它换成 🪵
+    streakRingNumberEl.textContent = '🔥';
+    const streakWord = lastFlameStreak > 0 ? ` · 上次连续 ${lastFlameStreak} 天` : '';
+    streakRingHintEl.textContent = `${daysSince} 天没读,火灭了${streakWord}`;
+    streakRingHintEl.classList.add('is-extinguish-msg');
+    playExtinguishAnimation();
+    return;
+  }
+
   if (streak > 0) {
     // 暗火:有 streak 但今天还没开始,火苗暗着等今天点
     streakRingEl.classList.add('has-flame');
     streakRingNumberEl.textContent = '🔥';
     streakRingHintEl.textContent = `连续 ${streak} 天 · 今天还没开始`;
   } else {
-    // 木桩:火从来没点过
+    // 木桩:火从来没点过(或之前已经熄过了)
     streakRingNumberEl.textContent = '🪵';
     streakRingHintEl.textContent = '读 10 分钟点燃今天';
   }

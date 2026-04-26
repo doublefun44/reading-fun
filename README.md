@@ -102,3 +102,19 @@ GitHub Pages 部署
 - 排除"重新开始读"过的书:handleRestartReading 已经把 status 改回 reading,
   getAbandonedStats 只筛 status='abandoned',天然排除
 - detailReturnTo 加了 'abandonedReview' 分支:从这页进详情页,返回时回这页
+
+- [x] Stage 7-b: 火焰熄灭动画
+
+## 火焰熄灭 Notes
+- 触发时机:用户打开 PWA 那一刻,而不是按时间走
+  - 真按时间触发的话,用户压根没打开就看不到,白做
+  - 隔几天回来 → 看到火苗塌下去变木桩 + 文案"X 天没读,火灭了" → 有反馈
+- 熄灭规则照旧用 calcStreak:今天没达标 + 昨天也没达标 → streak=0 → 该灭
+  最早第 2 天打开就会触发(从"上次有火那天"算第 2 天)
+- 一次性事件:两个 localStorage key 跟踪
+  - rpg.lastFlameDate    上次显示火焰的本地日期
+  - rpg.lastFlameStreak  上次显示时的 streak,用于"上次连续 N 天"文案
+  有火时盖上今天,没火时清掉。同一天不触发,避免结算页回首页这种短间隔误触发
+- 动画:1.6s,CSS keyframes 走完整段,JS 在 ~1.0s 处把 🔥 换成 🪵
+  衔接的是 keyframes 里 60→62% 的透明窗口,看不到硬切
+- 文案在 hint 里,加 .is-extinguish-msg 类(琥珀色 + 延迟淡入),克制但能看出是个事件

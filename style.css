@@ -634,6 +634,45 @@ h1 {
   opacity: 0.85;
 }
 
+/* 火焰熄灭动画:用户隔了几天回来,发现火该灭了 → 播一段过渡
+   时序:火苗变小、变灰、向下塌 → 1.0s 处 JS 把 emoji 换成 🪵 → 木桩淡入定格
+   动画跑完后 JS 会移掉 is-extinguishing,留下普通 is-empty 的木桩 */
+.streak-ring.is-extinguishing .streak-ring-number {
+  animation: flameExtinguish 1.6s ease-in forwards;
+}
+
+@keyframes flameExtinguish {
+  0%   { transform: scale(1)    translateY(0);    filter: grayscale(0)   brightness(1);   opacity: 1;    }
+  35%  { transform: scale(0.85) translateY(2px);  filter: grayscale(0.4) brightness(0.8); opacity: 0.8;  }
+  60%  { transform: scale(0.5)  translateY(10px); filter: grayscale(0.95) brightness(0.4); opacity: 0.25; }
+  /* ~62% 处 JS 把 🔥 换成 🪵,接下来这段是木桩从透明淡入定格 */
+  62%  { transform: scale(0.5)  translateY(10px); filter: grayscale(1)   brightness(0.6); opacity: 0;    }
+  100% { transform: scale(1)    translateY(0);    filter: grayscale(0.7) brightness(1);   opacity: 0.7;  }
+}
+
+/* 熄灭后 hint 的特殊样式:温和但能看清是个事件,不刺眼 */
+.streak-ring-hint.is-extinguish-msg {
+  color: #fbbf24;
+  opacity: 0.85;
+  animation: recapFadeIn 0.6s ease-out 0.8s both;
+}
+
+/* 火焰熄灭动画:从有火状态切到木桩时播放
+   时序:火苗变小 → 变灰塌下去 → 0.8s 处切换成 🪵 → 木桩淡入定格
+   切换 emoji 由 JS 在动画中点完成,这里只管视觉过渡 */
+.streak-ring.is-extinguishing .streak-ring-number {
+  animation: flameExtinguish 1.4s ease-in forwards;
+}
+
+@keyframes flameExtinguish {
+  0%   { transform: scale(1)    translateY(0);    filter: grayscale(0)   brightness(1);   opacity: 1;    }
+  30%  { transform: scale(0.85) translateY(2px);  filter: grayscale(0.4) brightness(0.85); opacity: 0.85; }
+  55%  { transform: scale(0.55) translateY(8px);  filter: grayscale(0.9) brightness(0.5);  opacity: 0.4;  }
+  /* 60% 那一帧 JS 把 emoji 换成 🪵,从这里开始是木桩在淡入 */
+  60%  { transform: scale(0.55) translateY(8px);  filter: grayscale(1)   brightness(0.6);  opacity: 0;    }
+  100% { transform: scale(1)    translateY(0);    filter: grayscale(0.7) brightness(1);   opacity: 0.7;  }
+}
+
 /* done 状态:环走满,中间数字加一点呼吸 */
 /* done 状态:环走满,中间是燃起的火焰 */
 .streak-ring.is-done {
