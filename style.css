@@ -1550,3 +1550,175 @@ h1 {
   /* 出现时柔和 */
   animation: recapFadeIn 0.25s ease-out;
 }
+/* ===== 放下的书 · 弃读分析页 ===== */
+#abandonedReviewView {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 管理页顶部那个入口按钮 */
+.abandoned-entry {
+  width: 100%;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #eaeaea;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, background 0.15s;
+  margin-bottom: 1rem;
+}
+
+.abandoned-entry:active {
+  transform: scale(0.98);
+  background: rgba(251, 191, 36, 0.12);
+}
+
+.abandoned-entry-text {
+  font-size: 0.95rem;
+  opacity: 0.85;
+  flex: 1;
+  margin-right: 0.5rem;
+}
+
+.abandoned-entry-arrow {
+  opacity: 0.5;
+  font-size: 1rem;
+}
+
+/* 总账那一句话 */
+.abandoned-summary {
+  text-align: center;
+  padding: 2rem 1rem 2.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.15rem;
+  font-weight: 300;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  opacity: 0.95;
+}
+
+.abandoned-summary .abandoned-num {
+  color: #fbbf24;
+  font-weight: 400;
+}
+
+.abandoned-summary .abandoned-num-quiet {
+  color: #4ade80;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* 投入最多的几本 */
+.abandoned-top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.abandoned-top-item {
+  width: 100%;
+  background: #16213e;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: left;
+  color: #eaeaea;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, background 0.15s;
+}
+
+.abandoned-top-item:active {
+  transform: scale(0.98);
+  background: #1c2950;
+}
+
+.abandoned-top-title {
+  font-size: 1.05rem;
+  font-weight: 300;
+}
+
+.abandoned-top-byline {
+  font-size: 0.85rem;
+  opacity: 0.5;
+}
+
+.abandoned-top-meta {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.15rem;
+}
+
+.abandoned-empty {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  background: #16213e;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  opacity: 0.6;
+  line-height: 1.6;
+}
+
+.abandoned-empty-sub {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+/* 反复出现的名字:作者块 / 译者块 */
+.abandoned-recurring-group {
+  margin-bottom: 1.25rem;
+}
+
+.abandoned-recurring-group:last-child {
+  margin-bottom: 0;
+}
+
+.abandoned-recurring-label {
+  font-size: 0.8rem;
+  font-weight: 400;
+  opacity: 0.5;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.abandoned-recurring-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.abandoned-recurring-item {
+  background: #16213e;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.abandoned-recurring-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 1rem;
+}
+
+.abandoned-recurring-stats {
+  font-size: 0.85rem;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}

@@ -115,7 +115,7 @@ let pendingRecap = null;  // { session, todayMsBefore, percentBefore }
 // ===== View 切换收口 =====
 // 5 个 section + 顶部 header 的显隐统一走这里,免得各处散写 .hidden
 // header 只在 list 视图可见
-const VIEW_NAMES = ['list', 'timer', 'progress', 'manage', 'detail', 'monthSummary'];
+const VIEW_NAMES = ['list', 'timer', 'progress', 'manage', 'detail', 'monthSummary', 'abandonedReview'];
 const VIEW_ELS = {
   list: listView,
   timer: timerView,
@@ -123,6 +123,7 @@ const VIEW_ELS = {
   manage: manageBooksView,
   detail: bookDetailView,
   monthSummary: monthSummaryView,
+  abandonedReview: document.getElementById('abandonedReviewView'),
 };
 
 function setActiveView(name) {
@@ -493,10 +494,17 @@ function renderManageBooks() {
   }
 
   manageBooksListEl.innerHTML = `
+    ${renderAbandonedReviewEntry(groups.abandoned.length)}
     ${renderManageGroup('在读', groups.reading, statsByBook)}
     ${renderManageGroup('已完读', groups.finished, statsByBook)}
     ${renderManageGroup('已弃读', groups.abandoned, statsByBook)}
   `;
+
+  // 入口的点击事件
+  const entryEl = manageBooksListEl.querySelector('#manageAbandonedEntry');
+  if (entryEl) {
+    entryEl.addEventListener('click', openAbandonedReview);
+  }
 
   // 绑点击事件:每条书 → 详情页(下一刀做,先留空)
   manageBooksListEl.querySelectorAll('.manage-book-item').forEach(el => {
@@ -536,6 +544,134 @@ function renderManageGroup(title, books, statsByBook) {
   `;
 }
 
+// 管理页顶部的"放下的书"入口。弃读 < 3 本时不显示。
+function renderAbandonedReviewEntry(abandonedCount) {
+  if (abandonedCount < 3) return '';
+  return `
+    <button id="manageAbandonedEntry" class="abandoned-entry">
+      <span class="abandoned-entry-text">放下的书 · 看看它们之间有什么共同点</span>
+      <span class="abandoned-entry-arrow">→</span>
+    </button>
+  `;
+}
+
+// ===== 放下的书 · 弃读分析页 =====
+function openAbandonedReview() {
+  setActiveView('abandonedReview');
+  renderAbandonedReview();
+  window.scrollTo(0, 0);
+}
+
+function closeAbandonedReview() {
+  setActiveView('manage');
+  renderManageBooks();
+}
+
+function renderAbandonedReview() {
+  const stats = getAbandonedStats();
+  renderAbandonedSummary(stats);
+  renderAbandonedTopInvested(stats);
+  renderAbandonedRecurring(stats);
+}
+
+function renderAbandonedSummary(stats) {
+  const el = document.getElementById('abandonedSummary');
+  const dur = formatHeroDuration(stats.totalAbandonedMs);
+  // 一句话:放下了多少 / 投了多少时间 / 对照完读了多少
+  el.innerHTML = `
+    你放下过 <span class="abandoned-num">${stats.abandonedCount} 本书</span>,
+    在它们身上花了 <span class="abandoned-num">${dur}</span>。
+    读完了 <span class="abandoned-num-quiet">${stats.finishedCount} 本</span>。
+  `;
+}
+
+function renderAbandonedTopInvested(stats) {
+  const el = document.getElementById('abandonedTopInvested');
+  if (!stats.topInvested || stats.topInvested.length === 0) {
+    el.innerHTML = `
+      <div class="abandoned-empty">
+        放下的书里,还没有投入超过 1 小时的<br>
+        <span class="abandoned-empty-sub">短暂尝试就放下,不算太亏</span>
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = stats.topInvested.map(b => {
+    // byline:作者 / 译者 译,各自有就显示
+    const bylineParts = [];
+    if (b.author) bylineParts.push(b.author);
+    if (b.translator) bylineParts.push(`${b.translator} 译`);
+    const byline = bylineParts.join(' · ');
+
+    // 第二行的元数据:时长 · 进度 · 弃读原因
+    const metaParts = [
+      formatDuration(b.totalMs),
+      `读到 ${b.percent}%`,
+    ];
+    if (b.abandonReason) metaParts.push(b.abandonReason);
+    const meta = metaParts.join(' · ');
+
+    return `
+      <button class="abandoned-top-item" data-book-id="${b.bookId}">
+        <div class="abandoned-top-title">《${b.title}》</div>
+        ${byline ? `<div class="abandoned-top-byline">${byline}</div>` : ''}
+        <div class="abandoned-top-meta">${meta}</div>
+      </button>
+    `;
+  }).join('');
+
+  el.querySelectorAll('.abandoned-top-item').forEach(item => {
+    item.addEventListener('click', () => {
+      openBookDetail(item.dataset.bookId, 'abandonedReview');
+    });
+  });
+}
+
+function renderAbandonedRecurring(stats) {
+  const section = document.getElementById('abandonedRecurringSection');
+  const authorsBlock = document.getElementById('abandonedAuthorsBlock');
+  const translatorsBlock = document.getElementById('abandonedTranslatorsBlock');
+  const authorsList = document.getElementById('abandonedAuthorsList');
+  const translatorsList = document.getElementById('abandonedTranslatorsList');
+
+  const hasAuthors = stats.recurringAuthors.length > 0;
+  const hasTranslators = stats.recurringTranslators.length > 0;
+
+  // 两边都没有:整个 section 隐藏,免得空骨架
+  if (!hasAuthors && !hasTranslators) {
+    section.classList.add('hidden');
+    return;
+  }
+  section.classList.remove('hidden');
+
+  // 作者
+  if (hasAuthors) {
+    authorsBlock.classList.remove('hidden');
+    authorsList.innerHTML = stats.recurringAuthors.map(a => `
+      <div class="abandoned-recurring-item">
+        <span class="abandoned-recurring-name">${a.name}</span>
+        <span class="abandoned-recurring-stats">${a.count} 次 · ${formatHeroDuration(a.totalMs)}</span>
+      </div>
+    `).join('');
+  } else {
+    authorsBlock.classList.add('hidden');
+  }
+
+  // 译者
+  if (hasTranslators) {
+    translatorsBlock.classList.remove('hidden');
+    translatorsList.innerHTML = stats.recurringTranslators.map(t => `
+      <div class="abandoned-recurring-item">
+        <span class="abandoned-recurring-name">${t.name}</span>
+        <span class="abandoned-recurring-stats">${t.count} 次 · ${formatHeroDuration(t.totalMs)}</span>
+      </div>
+    `).join('');
+  } else {
+    translatorsBlock.classList.add('hidden');
+  }
+}
+
 // ===== 书籍详情页 =====
 // returnTo: 'manage'(默认,从管理页进来) | 'monthSummary'(从月总结进来) | 'list'(从添加书 modal 的"已弃读重复"提示跳进来)
 function openBookDetail(bookId, returnTo = 'manage') {
@@ -553,6 +689,9 @@ function closeBookDetail() {
   if (back === 'monthSummary') {
     setActiveView('monthSummary');
     renderMonthSummary();
+  } else if (back === 'abandonedReview') {
+    setActiveView('abandonedReview');
+    renderAbandonedReview();
   } else if (back === 'list') {
     setActiveView('list');
     renderBooks();
@@ -1437,6 +1576,7 @@ manageBooksBtn.addEventListener('click', openManageBooks);
 manageBackBtn.addEventListener('click', closeManageBooks);
 manageAddBtn.addEventListener('click', openModal);
 detailBackBtn.addEventListener('click', closeBookDetail);
+document.getElementById('abandonedBackBtn').addEventListener('click', closeAbandonedReview);
 
 addBookModal.addEventListener('click', (e) => {
   if (e.target === addBookModal) closeModal();

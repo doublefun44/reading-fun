@@ -265,9 +265,6 @@
         <button class="abandon-reason-item" data-reason="太长了没耐心">
           太长了没耐心
         </button>
-        <button class="abandon-reason-item" data-reason="不适合现在的我">
-          不适合现在的我
-        </button>
         <button class="abandon-reason-item" data-reason="其他">
           其他
         </button>
@@ -353,6 +350,39 @@
   <section class="month-section">
     <h3 class="month-section-title">和上月相比</h3>
     <div id="monthComparison" class="month-comparison"></div>
+  </section>
+</section>
+
+<!-- 放下的书 · 弃读分析页 -->
+<section id="abandonedReviewView" class="hidden">
+  <div class="manage-header">
+    <button id="abandonedBackBtn" class="btn-text">← 返回</button>
+    <h2 class="manage-title">放下的书</h2>
+    <span class="manage-header-spacer"></span>
+  </div>
+
+  <!-- 总账 -->
+  <div class="abandoned-summary" id="abandonedSummary"></div>
+
+  <!-- 投入最多的几本 -->
+  <section class="month-section">
+    <h3 class="month-section-title">投入最多的几本</h3>
+    <div id="abandonedTopInvested" class="abandoned-top-list"></div>
+  </section>
+
+  <!-- 反复出现的名字 -->
+  <section class="month-section" id="abandonedRecurringSection">
+    <h3 class="month-section-title">反复出现的名字</h3>
+
+    <div class="abandoned-recurring-group" id="abandonedAuthorsBlock">
+      <h4 class="abandoned-recurring-label">作者</h4>
+      <div id="abandonedAuthorsList" class="abandoned-recurring-list"></div>
+    </div>
+
+    <div class="abandoned-recurring-group" id="abandonedTranslatorsBlock">
+      <h4 class="abandoned-recurring-label">译者</h4>
+      <div id="abandonedTranslatorsList" class="abandoned-recurring-list"></div>
+    </div>
   </section>
 </section>
 </main>

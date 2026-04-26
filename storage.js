@@ -551,3 +551,100 @@ function formatHeroDuration(ms) {
   if (m === 0) return `${h} 小时`;
   return `${h} 小时 ${m} 分`;
 }
+
+// ============================================================
+// ===== 放下的书：弃读分析数据 =====
+// ============================================================
+// 目标:不是统计弃读率,是识别"投入了不少时间但最终放下"的书的共同特征
+// 用来当避雷指南:以后看到类似作者/译者就多个心眼
+//
+// 出参:
+// {
+//   abandonedCount,    // 弃读书数量(只算 status='abandoned' 的)
+//   finishedCount,     // 完读书数量(对照用)
+//   totalAbandonedMs,  // 投在弃读书上的总时长
+//   topInvested: [     // 投入最多的几本(>= 1 小时,最多 5 本,时长降序)
+//     { bookId, title, author, translator, totalMs, percent, abandonReason }
+//   ],
+//   recurringAuthors: [ // 在弃读书里出现 ≥2 次的作者(时长降序)
+//     { name, count, totalMs }
+//   ],
+//   recurringTranslators: [ // 同上,译者
+//     { name, count, totalMs }
+//   ],
+// }
+function getAbandonedStats() {
+  const allBooks = storage.getBooks();
+  const allSessions = storage.getSessions();
+
+  const abandonedBooks = allBooks.filter(b => b.status === 'abandoned');
+  const finishedBooks = allBooks.filter(b => b.status === 'finished');
+
+  // 每本弃读书的总时长
+  const msByBook = {};
+  for (const s of allSessions) {
+    msByBook[s.bookId] = (msByBook[s.bookId] || 0) + s.duration;
+  }
+
+  // 弃读书的总投入时长
+  let totalAbandonedMs = 0;
+  for (const b of abandonedBooks) {
+    totalAbandonedMs += msByBook[b.id] || 0;
+  }
+
+  // ---- 投入最多的几本 ----
+  const ONE_HOUR = 60 * 60 * 1000;
+  const topInvested = abandonedBooks
+    .map(b => ({
+      bookId: b.id,
+      title: b.title,
+      author: b.author || '',
+      translator: b.translator || '',
+      totalMs: msByBook[b.id] || 0,
+      percent: b.percent,
+      abandonReason: b.abandonReason || '',
+    }))
+    .filter(b => b.totalMs >= ONE_HOUR)
+    .sort((a, b) => b.totalMs - a.totalMs)
+    .slice(0, 5);
+
+  // ---- 重复出现的名字(作者 / 译者各算各的) ----
+  // 同一本书的时长不能重复算到作者上又算到译者上吗?会的,但这是想要的行为:
+  // 因为"作者维度"和"译者维度"是分开判断的,各自的累计都需要完整
+  const authorMap = {};      // name -> { count, totalMs }
+  const translatorMap = {};
+
+  for (const b of abandonedBooks) {
+    const ms = msByBook[b.id] || 0;
+    if (b.author) {
+      if (!authorMap[b.author]) authorMap[b.author] = { count: 0, totalMs: 0 };
+      authorMap[b.author].count += 1;
+      authorMap[b.author].totalMs += ms;
+    }
+    if (b.translator) {
+      if (!translatorMap[b.translator]) translatorMap[b.translator] = { count: 0, totalMs: 0 };
+      translatorMap[b.translator].count += 1;
+      translatorMap[b.translator].totalMs += ms;
+    }
+  }
+
+  // 阈值:出现 ≥2 次才算"反复出现"
+  const recurringAuthors = Object.entries(authorMap)
+    .filter(([_, v]) => v.count >= 2)
+    .map(([name, v]) => ({ name, count: v.count, totalMs: v.totalMs }))
+    .sort((a, b) => b.totalMs - a.totalMs);
+
+  const recurringTranslators = Object.entries(translatorMap)
+    .filter(([_, v]) => v.count >= 2)
+    .map(([name, v]) => ({ name, count: v.count, totalMs: v.totalMs }))
+    .sort((a, b) => b.totalMs - a.totalMs);
+
+  return {
+    abandonedCount: abandonedBooks.length,
+    finishedCount: finishedBooks.length,
+    totalAbandonedMs,
+    topInvested,
+    recurringAuthors,
+    recurringTranslators,
+  };
+}

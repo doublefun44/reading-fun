@@ -74,8 +74,31 @@ GitHub Pages 部署
 - 一年数据估算 ~100KB,离 5MB 上限两个数量级,不用焦虑容量
 - 完读庆祝 modal 故意不绑 backdrop 关闭:仪式感,只能点"继续"
 
+- [x] Stage 6-e: 添加书查重
+
+## 查重 Notes
+- 匹配规则:trim + lowercase。中文没大小写,但顺手统一兼容英文书
+- 在读 / 已完读重复 → alert 拒绝;modal 不关,允许改名重试
+- 已弃读重复 → confirm 引导去详情页,详情页已有"重新开始读"按钮
+- detailReturnTo 加了 'list' 分支:从添加 modal 跳详情页时,
+  返回应该回首页(用户来自首页),不是管理页也不是月总结
+
 
 - percent 是 source of truth,将来加纸质书页数模式时:
   加 mode/totalPages/currentPage 字段,页数模式下用 
   currentPage/totalPages 算出 percent 存回去,
   这样统计和列表逻辑不用动
+
+- [x] Stage 7-a: 弃读分析页"放下的书"
+
+## 放下的书 Notes
+- 目标不是统计弃读率,是识别"投了不少时间但最终放下"的书的共同特征
+  当避雷指南用,所以语气是温和自我观察,不是数据看板
+- 弃读 sheet 删了"不适合现在的我":跟"太长了没耐心"功能重叠,简化
+  老数据里如果有这个 reason 还能正常显示,不强制迁移
+- 入口在管理页"已弃读"分组上方,弃读 ≥3 本才出现(数据少没意义)
+- 三块结构:总账(一句话) / 投入最多的几本(≥1h,Top 5) / 反复出现的名字
+  反复出现 = 同一作者/译者 ≥2 次,作者和译者各算各的
+- 排除"重新开始读"过的书:handleRestartReading 已经把 status 改回 reading,
+  getAbandonedStats 只筛 status='abandoned',天然排除
+- detailReturnTo 加了 'abandonedReview' 分支:从这页进详情页,返回时回这页
