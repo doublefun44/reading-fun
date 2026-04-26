@@ -41,6 +41,7 @@ const finishCelebrationOkBtn = document.getElementById('finishCelebrationOkBtn')
 const exportBtn = document.getElementById('exportBtn');
 const importBtn = document.getElementById('importBtn');
 const importFileInput = document.getElementById('importFileInput');
+const exportHintEl = document.getElementById('exportHint');
 
 const streakRingEl = document.getElementById('streakRing');
 const streakRingNumberEl = document.getElementById('streakRingNumber');
@@ -74,17 +75,62 @@ const detailAbandonReasonEl = document.getElementById('detailAbandonReason');
 const detailActionsEl = document.getElementById('detailActions');
 const detailSessionsEl = document.getElementById('detailSessions');
 
+// 顶部 header(只在首页可见时显示)
+const appHeader = document.querySelector('.app-header');
+const openMonthSummaryBtn = document.getElementById('openMonthSummaryBtn');
+
+// 月总结页
+const monthSummaryView = document.getElementById('monthSummaryView');
+const monthBackBtn = document.getElementById('monthBackBtn');
+const monthPrevBtn = document.getElementById('monthPrevBtn');
+const monthNextBtn = document.getElementById('monthNextBtn');
+const monthLabelEl = document.getElementById('monthLabel');
+const monthHeroTextEl = document.getElementById('monthHeroText');
+const monthBookListEl = document.getElementById('monthBookList');
+const monthRecordsSection = document.getElementById('monthRecordsSection');
+const monthLongestSessionEl = document.getElementById('monthLongestSession');
+const monthFocusedDayEl = document.getElementById('monthFocusedDay');
+const monthHeatmapEl = document.getElementById('monthHeatmap');
+const monthStreakDaysEl = document.getElementById('monthStreakDays');
+const monthLongestStreakEl = document.getElementById('monthLongestStreak');
+const monthComparisonEl = document.getElementById('monthComparison');
+
 // ===== 计时状态 =====
 let currentSession = null;  // { bookId, startTime } | null
 let intervalId = null;
 let pendingProgressBookId = null;
 let currentDetailBookId = null;  // 详情页正在看的书 id
+// 月总结页:当前看的是哪个月
+let currentMonthKey = null;
+// 详情页"返回"应该回到哪:'manage' | 'monthSummary'
+let detailReturnTo = 'manage';
 // 弃读 sheet 的临时状态:正在为哪本书选弃读原因 + 当前选中哪个原因
 let pendingAbandonBookId = null;
 let selectedAbandonReason = null;
 // 结算页用:进 stopSession 时快照下来,saveProgress 时用
 let pendingRecap = null;  // { session, todayMsBefore, percentBefore }
 
+// ===== View 切换收口 =====
+// 5 个 section + 顶部 header 的显隐统一走这里,免得各处散写 .hidden
+// header 只在 list 视图可见
+const VIEW_NAMES = ['list', 'timer', 'progress', 'manage', 'detail', 'monthSummary'];
+const VIEW_ELS = {
+  list: listView,
+  timer: timerView,
+  progress: progressView,
+  manage: manageBooksView,
+  detail: bookDetailView,
+  monthSummary: monthSummaryView,
+};
+
+function setActiveView(name) {
+  if (!VIEW_NAMES.includes(name)) return;
+  for (const v of VIEW_NAMES) {
+    VIEW_ELS[v].classList.toggle('hidden', v !== name);
+  }
+  // header 只跟着 list 出现
+  appHeader.classList.toggle('hidden', name !== 'list');
+}
 
 
 // ===== 选书 sheet =====
@@ -362,21 +408,48 @@ function formatSessionTime(ts) {
 function renderBooks() {
   renderStreakRing();
   renderSessionHistory();
+  renderExportHint();
+}
+
+// 上次导出 > 14 天才提示一次,克制即可,不打扰
+// 没导出过且已经积累了一些 session 时也提示
+function renderExportHint() {
+  const lastExportAt = Number(localStorage.getItem('rpg.lastExportAt')) || 0;
+  const sessionCount = storage.getSessions().length;
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+
+  // 还没攒下东西就别催
+  if (sessionCount < 5) {
+    exportHintEl.classList.add('hidden');
+    return;
+  }
+
+  if (lastExportAt === 0) {
+    exportHintEl.textContent = '还没备份过,建议导出一份';
+    exportHintEl.classList.remove('hidden');
+    return;
+  }
+
+  const daysAgo = Math.floor((now - lastExportAt) / day);
+  if (daysAgo >= 14) {
+    exportHintEl.textContent = `上次备份是 ${daysAgo} 天前`;
+    exportHintEl.classList.remove('hidden');
+  } else {
+    exportHintEl.classList.add('hidden');
+  }
 }
 
 // ===== 管理书籍页 =====
 function openManageBooks() {
-  listView.classList.add('hidden');
-  manageBooksView.classList.remove('hidden');
+  setActiveView('manage');
   renderManageBooks();
 }
 
 function closeManageBooks() {
-  manageBooksView.classList.add('hidden');
-  listView.classList.remove('hidden');
+  setActiveView('list');
   renderBooks();  // 回到首页时刷新一下,以防数据变了
 }
-
 function renderManageBooks() {
   const books = storage.getBooks();
   const sessions = storage.getSessions();
@@ -462,21 +535,28 @@ function renderManageGroup(title, books, statsByBook) {
 }
 
 // ===== 书籍详情页 =====
-function openBookDetail(bookId) {
+// returnTo: 'manage'(默认,从管理页进来) | 'monthSummary'(从月总结进来)
+function openBookDetail(bookId, returnTo = 'manage') {
   currentDetailBookId = bookId;
-  manageBooksView.classList.add('hidden');
-  bookDetailView.classList.remove('hidden');
+  detailReturnTo = returnTo;
+  setActiveView('detail');
   renderBookDetail();
   // 从顶部开始看,免得长列表停在中间
   window.scrollTo(0, 0);
 }
 
 function closeBookDetail() {
+  const back = detailReturnTo;
   currentDetailBookId = null;
-  bookDetailView.classList.add('hidden');
-  manageBooksView.classList.remove('hidden');
-  renderManageBooks();  // 回去时刷新,数据可能变了
+  if (back === 'monthSummary') {
+    setActiveView('monthSummary');
+    renderMonthSummary();  // 数据可能变了(完读/弃读/删除)
+  } else {
+    setActiveView('manage');
+    renderManageBooks();
+  }
 }
+
 
 function renderBookDetail() {
   const book = storage.getBooks().find(b => b.id === currentDetailBookId);
@@ -620,8 +700,258 @@ function handleDeleteFromDetail(bookId) {
   closeBookDetail();
 }
 
+// ===== 月总结页 =====
+function openMonthSummary() {
+  currentMonthKey = getCurrentMonthKey();
+  setActiveView('monthSummary');
+  renderMonthSummary();
+  window.scrollTo(0, 0);
+}
+
+function closeMonthSummary() {
+  setActiveView('list');
+  renderBooks();
+}
+
+function navigateMonth(delta) {
+  if (!currentMonthKey) return;
+  const targetKey = delta < 0
+    ? getPrevMonthKey(currentMonthKey)
+    : getNextMonthKey(currentMonthKey);
+  if (!canNavigateToMonth(targetKey)) return;
+  currentMonthKey = targetKey;
+  renderMonthSummary();
+  window.scrollTo(0, 0);
+}
+
+function renderMonthSummary() {
+  if (!currentMonthKey) return;
+  const stats = getMonthStats(currentMonthKey);
+  const comparison = getMonthComparison(currentMonthKey);
+
+  renderMonthHeader(currentMonthKey);
+  renderMonthHero(stats);
+  renderMonthBooks(stats);
+  renderMonthRecords(stats);
+  renderMonthHeatmap(stats);
+  renderMonthStreak(stats);
+  renderMonthComparison(comparison);
+}
+
+// ----- 子渲染:头部(月份 + 左右箭头) -----
+function renderMonthHeader(monthKey) {
+  monthLabelEl.textContent = formatMonthLabel(monthKey);
+  monthPrevBtn.disabled = !canNavigateToMonth(getPrevMonthKey(monthKey));
+  monthNextBtn.disabled = !canNavigateToMonth(getNextMonthKey(monthKey));
+}
+
+// ----- 子渲染:Hero 文案 -----
+function renderMonthHero(stats) {
+  const monthName = formatMonthLabel(stats.monthKey);  // "2026 年 4 月"
+  // 取月名里的"X 月",简短点
+  const shortMonth = monthName.match(/(\d+)\s*月/);
+  const monthShort = shortMonth ? `${shortMonth[1]} 月` : monthName;
+
+  if (stats.sessionCount === 0 || stats.totalMs === 0) {
+    monthHeroTextEl.innerHTML =
+      `<span class="hero-empty">${monthShort}还没读过书</span>`;
+    return;
+  }
+
+  const dur = formatHeroDuration(stats.totalMs);
+  const bookN = stats.bookCount;
+
+  if (bookN === 0) {
+    // 极少见:有 session 但书都被删了
+    monthHeroTextEl.innerHTML =
+      `${monthShort},一共读了 <span class="hero-highlight">${dur}</span>`;
+    return;
+  }
+
+  monthHeroTextEl.innerHTML =
+    `${monthShort},你和 <span class="hero-highlight">${bookN} 本书</span>` +
+    `共度了 <span class="hero-highlight">${dur}</span>`;
+}
+
+// ----- 子渲染:书列表 -----
+function renderMonthBooks(stats) {
+  if (!stats.books || stats.books.length === 0) {
+    monthBookListEl.innerHTML =
+      `<div class="month-empty">这个月还没读过书</div>`;
+    return;
+  }
+
+  monthBookListEl.innerHTML = stats.books.map(b => `
+    <button class="month-book-item" data-book-id="${b.bookId}">
+      <span class="month-book-title">${b.title}</span>
+      <span class="month-book-duration">${formatDuration(b.totalMs)}</span>
+    </button>
+  `).join('');
+
+  monthBookListEl.querySelectorAll('.month-book-item').forEach(el => {
+    el.addEventListener('click', () => {
+      openBookDetail(el.dataset.bookId, 'monthSummary');
+    });
+  });
+}
+
+// ----- 子渲染:记录(最长 session + 最专注的一天) -----
+function renderMonthRecords(stats) {
+  // 两条都没有就把整个 section 藏掉,避免空骨架
+  if (!stats.longestSession && !stats.focusedDay) {
+    monthRecordsSection.classList.add('hidden');
+    return;
+  }
+  monthRecordsSection.classList.remove('hidden');
+
+  // 最长 session
+  if (stats.longestSession) {
+    const ls = stats.longestSession;
+    const d = new Date(ls.startTime);
+    const dateText = `${d.getMonth() + 1}/${d.getDate()}`;
+    const titleText = ls.bookTitle || '(已删除)';
+    monthLongestSessionEl.innerHTML = `
+      <div class="month-record-label">最长一次</div>
+      <div class="month-record-value">${formatDuration(ls.duration)}</div>
+      <div class="month-record-detail">《${titleText}》· ${dateText}</div>
+    `;
+  } else {
+    monthLongestSessionEl.innerHTML = `
+      <div class="month-record-label">最长一次</div>
+      <div class="month-record-empty">—</div>
+    `;
+  }
+
+  // 最专注的一天
+  if (stats.focusedDay) {
+    const fd = stats.focusedDay;
+    // dateKey: "YYYY-MM-DD"
+    const parts = fd.dateKey.split('-');
+    const dateText = `${Number(parts[1])}/${Number(parts[2])}`;
+    // 那天读了几次 session
+    const dayStart = new Date(fd.dateKey + 'T00:00:00').getTime();
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+    const sessionCount = storage.getSessions()
+      .filter(s => s.startTime >= dayStart && s.startTime < dayEnd)
+      .length;
+    monthFocusedDayEl.innerHTML = `
+      <div class="month-record-label">最专注的一天</div>
+      <div class="month-record-value">${formatDuration(fd.totalMs)}</div>
+      <div class="month-record-detail">${dateText} · 共 ${sessionCount} 次</div>
+    `;
+  } else {
+    monthFocusedDayEl.innerHTML = `
+      <div class="month-record-label">最专注的一天</div>
+      <div class="month-record-empty">—</div>
+    `;
+  }
+}
+
+// ----- 子渲染:热力图 -----
+// 周一开头:把 JS 默认的 Sunday=0 转成 Monday=0
+function renderMonthHeatmap(stats) {
+  const heatmap = stats.heatmap || [];
+  if (heatmap.length === 0) {
+    monthHeatmapEl.innerHTML = '';
+    return;
+  }
+
+  const monthKey = stats.monthKey;
+  const [year, month] = monthKey.split('-').map(Number);
+  // 当月 1 号是星期几(JS: Sunday=0...Saturday=6)
+  const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
+  // 转成"周一开头":Mon=0, Tue=1, ..., Sun=6
+  const leadingBlanks = (firstDayOfMonth + 6) % 7;
+
+  // 判断"未来日子":只对当月有意义
+  const todayKey = getMonthKey(new Date());  // "YYYY-MM"
+  const isCurrentMonth = monthKey === todayKey;
+  const today = new Date();
+  const todayDay = today.getDate();
+
+  const cells = [];
+  // 月初前的占位
+  for (let i = 0; i < leadingBlanks; i++) {
+    cells.push(`<div class="heatmap-cell heatmap-cell-blank"></div>`);
+  }
+  // 当月每一天
+  for (const item of heatmap) {
+    const isFuture = isCurrentMonth && item.day > todayDay;
+    let cls = 'heatmap-cell';
+    if (isFuture) {
+      cls += ' heatmap-cell-future';
+    } else if (item.qualified) {
+      cls += ' heatmap-cell-lit';
+    } else {
+      cls += ' heatmap-cell-empty';
+    }
+    cells.push(`<div class="${cls}">${item.day}</div>`);
+  }
+
+  monthHeatmapEl.innerHTML = cells.join('');
+}
+
+// ----- 子渲染:Streak 两个数字 -----
+function renderMonthStreak(stats) {
+  monthStreakDaysEl.textContent = stats.monthStreak || 0;
+  monthLongestStreakEl.textContent = stats.longestStreak || 0;
+}
+
+// ----- 子渲染:环比 -----
+function renderMonthComparison(comparison) {
+  const rows = [
+    { key: 'bookCount', label: '读过的书', isDuration: false, unit: ' 本' },
+    { key: 'activeDays', label: '阅读天数', isDuration: false, unit: ' 天' },
+    { key: 'totalMs',    label: '总时长',   isDuration: true,  unit: ''   },
+  ];
+
+  monthComparisonEl.innerHTML = rows.map(r => {
+    const c = comparison[r.key];
+    const currText = r.isDuration
+      ? formatHeroDuration(c.curr || 0)
+      : `${c.curr || 0}${r.unit}`;
+    const prevText = r.isDuration
+      ? formatHeroDuration(c.prev || 0)
+      : `${c.prev || 0}${r.unit}`;
+
+    let deltaText, deltaCls;
+    if (c.delta === 0 || c.delta == null) {
+      deltaText = '持平';
+      deltaCls = 'zero';
+    } else if (c.delta > 0) {
+      deltaText = r.isDuration
+        ? `+${formatHeroDuration(c.delta)}`
+        : `+${c.delta}${r.unit}`;
+      deltaCls = 'positive';
+    } else {
+      // c.delta < 0,formatHeroDuration 不接受负数,取绝对值再加负号
+      deltaText = r.isDuration
+        ? `-${formatHeroDuration(Math.abs(c.delta))}`
+        : `${c.delta}${r.unit}`;  // 数字本身有 -
+      deltaCls = 'negative';
+    }
+
+    return `
+      <div class="month-compare-row">
+        <span class="month-compare-label">${r.label}</span>
+        <span class="month-compare-values">
+          <span class="month-compare-curr">${currText}</span>
+          <span class="month-compare-delta ${deltaCls}">${deltaText}</span>
+          <span class="month-compare-prev">上月 ${prevText}</span>
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
 // ===== 导出 / 导入 =====
 function doExport() {
+  // 计时中导出会漏掉本次还没保存的 session
+  if (currentSession) {
+    const ok = confirm('当前正在阅读,本次记录还没保存到导出文件里。确定继续导出吗?');
+    if (!ok) return;
+  }
+
   const json = exportData();
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -629,11 +959,14 @@ function doExport() {
   const date = new Date().toISOString().slice(0, 10); // "2026-04-24"
   const a = document.createElement('a');
   a.href = url;
-  a.download = `reading-rpg-${date}.json`;
+  a.download = `pageember-${date}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
+  // 记一下"上次导出时间",用于"X 天没导出了"的提示
+  localStorage.setItem('rpg.lastExportAt', String(Date.now()));
 }
 
 function doImport(file) {
@@ -644,7 +977,9 @@ function doImport(file) {
       alert(`导入失败:${result.error}`);
       return;
     }
-    alert(`导入成功:${result.bookCount} 本书,${result.sessionCount} 条记录`);
+    let msg = `导入成功:${result.bookCount} 本书,${result.sessionCount} 条记录`;
+    if (result.warning) msg += `\n\n注意:${result.warning}`;
+    alert(msg);
     renderBooks();
   };
   reader.onerror = () => alert('读取文件失败');
@@ -694,8 +1029,7 @@ function renderHourglass() {
 
   currentBookTitleEl.textContent = `📖 ${book.title}`;
 
-  listView.classList.add('hidden');
-  timerView.classList.remove('hidden');
+setActiveView('timer');
 
   // ↓↓↓ 新加这三行 ↓↓↓
   currentStageIndex = -1;
@@ -733,8 +1067,7 @@ function stopSession() {
   const book = storage.getBooks().find(b => b.id === bookId);
   if (!book) {
     // 理论上不会发生(除非读到一半书被别处删了)
-    timerView.classList.add('hidden');
-    listView.classList.remove('hidden');
+    setActiveView('list');
     renderBooks();
     return;
   }
@@ -760,8 +1093,7 @@ function stopSession() {
   recapPercentAfterInput.placeholder = book.percent;
   recapPercentAfterInput.disabled = false;
 
-  timerView.classList.add('hidden');
-  progressView.classList.remove('hidden');
+  setActiveView('progress');
 
   // 不自动 focus,免得键盘把整个结算页挤上去
   // 用户想改进度自己点输入框
@@ -860,8 +1192,7 @@ function finishProgress() {
   // 按钮恢复
   resetRecapButtons();
 
-  progressView.classList.add('hidden');
-  listView.classList.remove('hidden');
+  setActiveView('list');
   renderBooks();
 }
 
@@ -1062,6 +1393,12 @@ bookPickerSheet.addEventListener('click', (e) => {
   }
 });
 
+// 月总结入口
+openMonthSummaryBtn.addEventListener('click', openMonthSummary);
+monthBackBtn.addEventListener('click', closeMonthSummary);
+monthPrevBtn.addEventListener('click', () => navigateMonth(-1));
+monthNextBtn.addEventListener('click', () => navigateMonth(1));
+
 // 弃读 sheet:点选项 / 取消 / 确认 / backdrop 关闭
 abandonReasonListEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.abandon-reason-item');
@@ -1100,4 +1437,6 @@ recapPercentAfterInput.addEventListener('keydown', (e) => {
 
 
 // ===== 启动 =====
+migrateOnLoad();
+setActiveView('list');
 renderBooks();

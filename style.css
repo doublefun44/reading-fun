@@ -236,6 +236,15 @@ h1 {
 
 .btn-text:active { opacity: 0.7; }
 
+.export-hint {
+  font-size: 0.78rem;
+  opacity: 0.35;
+  text-align: center;
+  margin-top: 0.4rem;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
 .section-title {
   font-size: 0.85rem;
   font-weight: 400;
@@ -1116,4 +1125,390 @@ h1 {
   padding: 1.5rem;
   opacity: 0.4;
   font-size: 0.9rem;
+}
+
+/* ===== 顶部 header ===== */
+.app-header {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.5rem;
+  min-height: 2.5rem;
+}
+
+.app-header.hidden {
+  display: none;
+}
+
+.header-icon-btn {
+  background: none;
+  border: none;
+  color: #eaeaea;
+  opacity: 0.5;
+  padding: 0.5rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon-btn:active {
+  opacity: 0.9;
+}
+
+.header-icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ===== 月总结页 ===== */
+#monthSummaryView {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 0.5rem;
+}
+
+.month-header-spacer {
+  width: 4rem;  /* 跟"← 返回"按钮宽度差不多,让中间居中 */
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.month-nav-btn {
+  background: none;
+  border: none;
+  color: #eaeaea;
+  font-size: 1.5rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.month-nav-btn:active {
+  opacity: 1;
+}
+
+.month-nav-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.month-label {
+  font-size: 1.05rem;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  min-width: 7rem;
+  text-align: center;
+}
+
+/* ----- Hero ----- */
+.month-hero {
+  text-align: center;
+  padding: 2rem 1rem 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.month-hero-text {
+  font-size: 1.35rem;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+.month-hero-text .hero-highlight {
+  color: #4ade80;
+  font-weight: 400;
+}
+
+.month-hero-text .hero-empty {
+  opacity: 0.5;
+  font-size: 1.1rem;
+}
+
+/* ----- Section 通用 ----- */
+.month-section {
+  margin-bottom: 2rem;
+}
+
+.month-section-title {
+  font-size: 0.8rem;
+  font-weight: 400;
+  opacity: 0.4;
+  text-align: left;
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ----- 这个月读过的书 ----- */
+.month-book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.month-book-item {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  color: #eaeaea;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, background 0.15s;
+  width: 100%;
+  font-size: 1rem;
+}
+
+.month-book-item:active {
+  transform: scale(0.98);
+  background: #1c2950;
+}
+
+.month-book-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 1rem;
+}
+
+.month-book-duration {
+  opacity: 0.6;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-empty {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  opacity: 0.4;
+  font-size: 0.95rem;
+}
+
+/* ----- 记录(最长 session / 最专注的一天) ----- */
+.month-records {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.month-record {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.month-record-label {
+  font-size: 0.8rem;
+  opacity: 0.5;
+  letter-spacing: 0.02em;
+}
+
+.month-record-value {
+  font-size: 1.1rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-record-detail {
+  font-size: 0.85rem;
+  opacity: 0.55;
+  margin-top: 0.1rem;
+}
+
+.month-record-empty {
+  font-size: 1rem;
+  opacity: 0.4;
+}
+
+/* ----- 热力图 ----- */
+.month-heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  background: #16213e;
+  border-radius: 12px;
+  padding: 0.9rem;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.3);
+  position: relative;
+}
+
+.heatmap-cell.heatmap-cell-empty {
+  /* 默认就是这个样式 */
+}
+
+.heatmap-cell.heatmap-cell-lit {
+  background: #4ade80;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.heatmap-cell.heatmap-cell-future {
+  /* 当月内的"还没到的天":不显示数字,更低对比度 */
+  background: rgba(255, 255, 255, 0.02);
+  color: transparent;
+}
+
+.heatmap-cell.heatmap-cell-blank {
+  /* 月初前的占位格 */
+  background: transparent;
+  color: transparent;
+  pointer-events: none;
+}
+
+.month-heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  opacity: 0.55;
+}
+
+.month-heatmap-legend .heatmap-cell {
+  width: 14px;
+  height: 14px;
+  aspect-ratio: auto;
+}
+
+.heatmap-legend-text {
+  margin-right: 0.75rem;
+}
+
+/* ----- Streak ----- */
+.month-streak-row {
+  display: flex;
+  background: #16213e;
+  border-radius: 12px;
+  padding: 1.25rem;
+  gap: 1rem;
+}
+
+.month-streak-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.month-streak-value {
+  font-size: 2rem;
+  font-weight: 200;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.month-streak-label {
+  font-size: 0.8rem;
+  opacity: 0.5;
+}
+
+/* ----- 环比 ----- */
+.month-comparison {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.month-compare-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.95rem;
+}
+
+.month-compare-label {
+  opacity: 0.6;
+}
+
+.month-compare-values {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-compare-curr {
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+.month-compare-delta {
+  font-size: 0.85rem;
+  font-weight: 400;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.month-compare-delta.positive {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.month-compare-delta.negative {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.month-compare-delta.zero {
+  opacity: 0.5;
+}
+
+.month-compare-prev {
+  font-size: 0.8rem;
+  opacity: 0.45;
 }

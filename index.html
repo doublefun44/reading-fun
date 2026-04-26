@@ -16,6 +16,16 @@
 </head>
 <body>
 <main class="container">
+  <header class="app-header">
+    <button id="openMonthSummaryBtn" class="header-icon-btn" aria-label="月总结">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+      </svg>
+    </button>
+  </header>
   <h1>Reading RPG</h1>
 
 <!-- 列表态 -->
@@ -36,6 +46,7 @@
     <button id="importBtn" class="btn-text">导入</button>
     <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
   </div>
+  <div id="exportHint" class="export-hint hidden"></div>
   <section id="sessionList" class="session-list"></section>
 </section>
 
@@ -279,6 +290,72 @@
       </div>
     </div>
   </div>
+
+  <!-- 月总结页 -->
+<section id="monthSummaryView" class="hidden">
+  <div class="month-header">
+    <button id="monthBackBtn" class="btn-text">← 返回</button>
+    <div class="month-nav">
+      <button id="monthPrevBtn" class="month-nav-btn" aria-label="上一月">‹</button>
+      <span id="monthLabel" class="month-label">2026 年 4 月</span>
+      <button id="monthNextBtn" class="month-nav-btn" aria-label="下一月">›</button>
+    </div>
+    <span class="month-header-spacer"></span>
+  </div>
+
+  <!-- Hero -->
+  <div class="month-hero">
+    <div class="month-hero-text" id="monthHeroText"></div>
+  </div>
+
+  <!-- 这个月读过的书 -->
+  <section class="month-section">
+    <h3 class="month-section-title">这个月读过的书</h3>
+    <div id="monthBookList" class="month-book-list"></div>
+  </section>
+
+  <!-- 记录 -->
+  <section class="month-section" id="monthRecordsSection">
+    <h3 class="month-section-title">记录</h3>
+    <div class="month-records">
+      <div class="month-record" id="monthLongestSession"></div>
+      <div class="month-record" id="monthFocusedDay"></div>
+    </div>
+  </section>
+
+  <!-- 热力图 -->
+  <section class="month-section">
+    <h3 class="month-section-title">每日</h3>
+    <div id="monthHeatmap" class="month-heatmap"></div>
+    <div class="month-heatmap-legend">
+      <span class="heatmap-cell heatmap-cell-empty"></span>
+      <span class="heatmap-legend-text">没读 / 不到 10 分钟</span>
+      <span class="heatmap-cell heatmap-cell-lit"></span>
+      <span class="heatmap-legend-text">读了 10 分钟以上</span>
+    </div>
+  </section>
+
+  <!-- Streak -->
+  <section class="month-section">
+    <h3 class="month-section-title">连续</h3>
+    <div class="month-streak-row">
+      <div class="month-streak-stat">
+        <div class="month-streak-value" id="monthStreakDays">0</div>
+        <div class="month-streak-label">天达标</div>
+      </div>
+      <div class="month-streak-stat">
+        <div class="month-streak-value" id="monthLongestStreak">0</div>
+        <div class="month-streak-label">最长连续</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 环比 -->
+  <section class="month-section">
+    <h3 class="month-section-title">和上月相比</h3>
+    <div id="monthComparison" class="month-comparison"></div>
+  </section>
+</section>
 </main>
 
 

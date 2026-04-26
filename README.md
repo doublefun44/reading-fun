@@ -1,4 +1,4 @@
-# Reading RPG
+# 页焰 · PageEmber
 
 iPad 读书追踪 PWA。
 
@@ -61,6 +61,18 @@ GitHub Pages 部署
 - 选书 sheet 只列 status='reading' 的书。全告一段落时给"没有在读的书 / 添加新书"
 - 拔掉 XP 系统:理由是 XP 把"和书的关系"稀释成数字游戏。
   结算页第二层现在是"今天累计 X" + 可选里程碑,不计分
+
+- [x] Stage 6-c+d: 导入导出加固 + 备份提醒
+
+## Stage 6 c+d Notes
+- SCHEMA_VERSION 字段:改 schema 时 +1,在 normalizeBook/Session 里加迁移
+- normalizeBook 是单一入口:导入走它,migrateOnLoad 启动也走它
+  迁移后字段干净,UI 代码可以渐进去掉 b.status || 'reading' 这种兜底
+- 老数据 finishedAt 兜底为 createdAt:不知道真实完读时间,
+  用最早的时间戳总比 null 好(月统计才算得上)
+- 计时中导出会漏当前 session,加 confirm 提醒,不强制结束计时
+- 一年数据估算 ~100KB,离 5MB 上限两个数量级,不用焦虑容量
+- 完读庆祝 modal 故意不绑 backdrop 关闭:仪式感,只能点"继续"
 
 
 - percent 是 source of truth,将来加纸质书页数模式时:
