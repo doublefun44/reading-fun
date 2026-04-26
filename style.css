@@ -1520,3 +1520,33 @@ h1 {
   font-size: 0.8rem;
   opacity: 0.45;
 }
+
+/* ===== 添加书 modal:行内提示 + 次级动作 ===== */
+.modal-inline-hint {
+  font-size: 0.85rem;
+  margin-top: 0.4rem;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  /* 出现时柔和,跟 sheet 风格一致 */
+  animation: recapFadeIn 0.25s ease-out;
+}
+
+/* 在读 / 已完读重复:琥珀色,警示但不刺眼 */
+.modal-inline-hint.is-block {
+  color: #fbbf24;
+  opacity: 0.9;
+}
+
+/* 已弃读:中性灰,引导口吻,不当作错误 */
+.modal-inline-hint.is-soft {
+  color: #eaeaea;
+  opacity: 0.7;
+}
+
+.modal-secondary-action {
+  margin-top: 0.5rem;
+  text-align: center;
+  width: 100%;
+  /* 出现时柔和 */
+  animation: recapFadeIn 0.25s ease-out;
+}

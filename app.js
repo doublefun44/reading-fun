@@ -16,6 +16,8 @@ const bookTranslatorInput = document.getElementById('bookTranslator');
 const bookPercentInput = document.getElementById('bookPercent');
 const saveBookBtn = document.getElementById('saveBookBtn');
 const cancelBookBtn = document.getElementById('cancelBookBtn');
+const bookTitleHint = document.getElementById('bookTitleHint');
+const bookGoRestartBtn = document.getElementById('bookGoRestartBtn');
 
 const progressView = document.getElementById('progressView');
 const recapDurationEl = document.getElementById('recapDuration');
@@ -322,7 +324,6 @@ if (todayMs >= threshold) {
   return;
 }
 
-
   if (todayMs >= 60000) {
     // short:今天读了但还没到门槛
     streakRingEl.classList.add('is-short');
@@ -536,7 +537,7 @@ function renderManageGroup(title, books, statsByBook) {
 }
 
 // ===== 书籍详情页 =====
-// returnTo: 'manage'(默认,从管理页进来) | 'monthSummary'(从月总结进来)
+// returnTo: 'manage'(默认,从管理页进来) | 'monthSummary'(从月总结进来) | 'list'(从添加书 modal 的"已弃读重复"提示跳进来)
 function openBookDetail(bookId, returnTo = 'manage') {
   currentDetailBookId = bookId;
   detailReturnTo = returnTo;
@@ -551,7 +552,10 @@ function closeBookDetail() {
   currentDetailBookId = null;
   if (back === 'monthSummary') {
     setActiveView('monthSummary');
-    renderMonthSummary();  // 数据可能变了(完读/弃读/删除)
+    renderMonthSummary();
+  } else if (back === 'list') {
+    setActiveView('list');
+    renderBooks();
   } else {
     setActiveView('manage');
     renderManageBooks();
@@ -1131,6 +1135,8 @@ function closeModal() {
   bookAuthorInput.value = '';
   bookTranslatorInput.value = '';
   bookPercentInput.value = '0';
+  hideTitleHint();
+  hideRestartAction();
   // 如果管理页正开着,刷新一下;否则保持原行为(saveBook 那边会调 renderBooks)
   if (!manageBooksView.classList.contains('hidden')) {
     renderManageBooks();
@@ -1140,21 +1146,42 @@ function closeModal() {
 function saveBook() {
   const title = bookTitleInput.value.trim();
   if (!title) {
-    alert('请输入书名');
+    showTitleHint('请输入书名', 'block');
     return;
   }
 
-const initialPercent = Number(bookPercentInput.value) || 0;
-const newBook = {
-  id: uuid(),
-  title,
-  author: bookAuthorInput.value.trim(),
-  translator: bookTranslatorInput.value.trim(),
-  percent: initialPercent,
-  status: initialPercent >= 100 ? 'finished' : 'reading',
-  finishedAt: initialPercent >= 100 ? Date.now() : null,
-  createdAt: Date.now(),
-};
+  // 查重:书名忽略大小写和首尾空格
+  // 中文没大小写,但顺手统一一下,将来加英文书也兼容
+  const normalized = title.toLowerCase();
+  const existing = storage.getBooks().find(
+    b => b.title.trim().toLowerCase() === normalized
+  );
+
+  if (existing) {
+    const status = existing.status || 'reading';
+    if (status === 'abandoned') {
+      // 已弃读:温和引导,显示提示 + 露出"去重新开始读"按钮
+      showTitleHint(`《${existing.title}》之前弃读了`, 'soft');
+      showRestartAction(existing.id);
+      return;
+    }
+    // 在读 / 已完读:挡住保存,提示存在
+    const statusText = status === 'finished' ? '已完读' : '在读';
+    showTitleHint(`《${existing.title}》已经在书架里了(${statusText})`, 'block');
+    return;
+  }
+
+  const initialPercent = Number(bookPercentInput.value) || 0;
+  const newBook = {
+    id: uuid(),
+    title,
+    author: bookAuthorInput.value.trim(),
+    translator: bookTranslatorInput.value.trim(),
+    percent: initialPercent,
+    status: initialPercent >= 100 ? 'finished' : 'reading',
+    finishedAt: initialPercent >= 100 ? Date.now() : null,
+    createdAt: Date.now(),
+  };
 
   const books = storage.getBooks();
   books.push(newBook);
@@ -1164,6 +1191,30 @@ const newBook = {
   renderBooks();
 }
 
+// 显示书名输入框下方的提示
+// kind: 'block'(琥珀色,挡住保存) | 'soft'(灰色,引导)
+function showTitleHint(text, kind) {
+  bookTitleHint.textContent = text;
+  bookTitleHint.classList.remove('is-block', 'is-soft');
+  bookTitleHint.classList.add(kind === 'block' ? 'is-block' : 'is-soft');
+  bookTitleHint.classList.remove('hidden');
+}
+
+function hideTitleHint() {
+  bookTitleHint.classList.add('hidden');
+  bookTitleHint.textContent = '';
+}
+
+// 露出/收起"去重新开始读"按钮,顺便挂上目标 bookId
+function showRestartAction(bookId) {
+  bookGoRestartBtn.dataset.bookId = bookId;
+  bookGoRestartBtn.classList.remove('hidden');
+}
+
+function hideRestartAction() {
+  bookGoRestartBtn.classList.add('hidden');
+  delete bookGoRestartBtn.dataset.bookId;
+}
 
 // ===== 结算页 =====
 function finishProgress() {
@@ -1359,6 +1410,20 @@ function closeFinishCelebration() {
 cancelBookBtn.addEventListener('click', closeModal);
 saveBookBtn.addEventListener('click', saveBook);
 stopBtn.addEventListener('click', stopSession);
+// 用户改书名时,清掉之前的提示和"去重新开始读"按钮
+bookTitleInput.addEventListener('input', () => {
+  hideTitleHint();
+  hideRestartAction();
+});
+
+// "去重新开始读":关 modal,跳那本书的详情页
+bookGoRestartBtn.addEventListener('click', () => {
+  const bookId = bookGoRestartBtn.dataset.bookId;
+  if (!bookId) return;
+  closeModal();
+  // 'list' = 从详情页返回时回首页(用户本来就是从首页开 modal 的)
+  openBookDetail(bookId, 'list');
+});
 
 // 结算页两个按钮的初始绑定(saveProgress 还会被 resetRecapButtons 重新绑,这里先保证首次能用)
 saveProgressBtn.addEventListener('click', saveProgress);
