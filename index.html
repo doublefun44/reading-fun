@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -401,4 +402,409 @@
   <script src="storage.js"></script>
   <script src="app.js"></script>
 </body>
+=======
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- iOS PWA:全屏、没有地址栏 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PageEmber">
+
+<!-- 主题色(状态栏/任务切换时的颜色) -->
+<meta name="theme-color" content="#1a1a2e">
+ <title>页焰 · PageEmber</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="container">
+  <header class="app-header">
+    <button id="openMonthSummaryBtn" class="header-icon-btn" aria-label="月总结">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+      </svg>
+    </button>
+  </header>
+  <h1>PageEmber</h1>
+
+<!-- 列表态 -->
+<section id="listView">
+  <div id="streakRing" class="streak-ring">
+    <div class="streak-ring-inner">
+      <div class="streak-ring-number" id="streakRingNumber">0</div>
+      <div class="streak-ring-label" id="streakRingLabel">连续</div>
+    </div>
+  </div>
+  <div id="streakRingHint" class="streak-ring-hint"></div>
+
+  <button id="startReadingBtn" class="btn btn-primary btn-hero">开始阅读</button>
+  <button id="manageBooksBtn" class="btn-text btn-text-line">管理书籍</button>
+
+  <div class="data-actions">
+    <button id="exportBtn" class="btn-text">导出</button>
+    <button id="importBtn" class="btn-text">导入</button>
+    <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
+  </div>
+  <div id="exportHint" class="export-hint hidden"></div>
+  <section id="sessionList" class="session-list"></section>
+</section>
+
+  <!-- 计时态 -->
+<section id="timerView" class="hidden">
+  <div id="currentBookTitle" class="current-book"></div>
+
+  <svg id="hourglass" class="hourglass" viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 木头渐变:深棕到稍亮的棕,模拟圆木的高光 -->
+    <linearGradient id="woodGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#3d2817" />
+      <stop offset="50%"  stop-color="#6b4423" />
+      <stop offset="100%" stop-color="#3d2817" />
+    </linearGradient>
+
+    <!-- 立柱用的窄渐变,跟横板区分一点 -->
+    <linearGradient id="pillarGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#2d1c0f" />
+      <stop offset="50%"  stop-color="#5a3818" />
+      <stop offset="100%" stop-color="#2d1c0f" />
+    </linearGradient>
+
+    <!-- 玻璃高光:从左上到右下的淡白 -->
+    <linearGradient id="glassHighlight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.18)" />
+      <stop offset="50%"  stop-color="rgba(255,255,255,0.02)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0.08)" />
+    </linearGradient>
+
+    <!-- 上半玻璃形状:外轮廓(梨形,上宽下窄到颈部) -->
+    <!-- 用 path 画曲线:从左上 → 右上 → 曲线收到颈部右 → 颈部左 → 曲线回到左上 -->
+    <path id="topGlassShape"
+      d="M 30,40
+         L 170,40
+         Q 170,90 110,150
+         L 90,150
+         Q 30,90 30,40 Z" />
+
+    <!-- 下半玻璃形状(上半镜像) -->
+    <path id="bottomGlassShape"
+      d="M 90,170
+         L 110,170
+         Q 170,230 170,280
+         L 30,280
+         Q 30,230 90,170 Z" />
+
+    <!-- 沙子被裁剪到玻璃形状内 -->
+    <clipPath id="topGlassClip">
+      <use href="#topGlassShape" />
+    </clipPath>
+    <clipPath id="bottomGlassClip">
+      <use href="#bottomGlassShape" />
+    </clipPath>
+  </defs>
+
+  <!-- ===== 木质底板(最底层) ===== -->
+  <!-- 顶板 -->
+  <rect x="10" y="10" width="180" height="24" rx="3" fill="url(#woodGradient)" />
+  <rect x="14" y="14" width="172" height="4" rx="2" fill="rgba(255,255,255,0.08)" />
+  <!-- 顶板装饰小条 -->
+  <rect x="20" y="32" width="160" height="6" rx="2" fill="#2d1c0f" />
+
+  <!-- 底板 -->
+  <rect x="20" y="282" width="160" height="6" rx="2" fill="#2d1c0f" />
+  <rect x="10" y="286" width="180" height="24" rx="3" fill="url(#woodGradient)" />
+  <rect x="14" y="304" width="172" height="4" rx="2" fill="rgba(0,0,0,0.3)" />
+
+  <!-- ===== 立柱 ===== -->
+  <rect x="14"  y="34" width="10" height="252" fill="url(#pillarGradient)" />
+  <rect x="176" y="34" width="10" height="252" fill="url(#pillarGradient)" />
+
+  <!-- ===== 玻璃容器(底色,放沙子之前) ===== -->
+  <use href="#topGlassShape"    fill="rgba(255,255,255,0.03)" />
+  <use href="#bottomGlassShape" fill="rgba(255,255,255,0.03)" />
+
+  <!-- ===== 沙子 ===== -->
+  <rect
+    id="sandTop"
+    class="sand"
+    x="30" y="40" width="140" height="110"
+    clip-path="url(#topGlassClip)" />
+
+  <rect
+    id="sandBottom"
+    class="sand"
+    x="30" y="280" width="140" height="0"
+    clip-path="url(#bottomGlassClip)" />
+
+  <!-- ===== 玻璃高光(覆盖在沙子之上,营造"沙子在玻璃后面"的感觉) ===== -->
+  <use href="#topGlassShape"    fill="url(#glassHighlight)" pointer-events="none" />
+  <use href="#bottomGlassShape" fill="url(#glassHighlight)" pointer-events="none" />
+
+  <!-- ===== 玻璃描边 ===== -->
+  <use href="#topGlassShape"    fill="none" stroke="rgba(234,234,234,0.25)" stroke-width="1" />
+  <use href="#bottomGlassShape" fill="none" stroke="rgba(234,234,234,0.25)" stroke-width="1" />
+</svg>
+  <button id="stopBtn" class="btn btn-secondary">停止</button>
+</section>
+
+<section id="progressView" class="hidden">
+  <!-- 第一层:这次读了什么 -->
+  <div class="recap-layer">
+    <div class="recap-duration" id="recapDuration"></div>
+    <div class="recap-book" id="recapBook"></div>
+
+    <div class="recap-progress">
+      <span class="recap-percent-before" id="recapPercentBefore"></span>
+      <span class="recap-arrow">→</span>
+      <input
+        type="number"
+        id="recapPercentAfter"
+        class="recap-percent-input"
+        min="0"
+        max="100"
+        inputmode="numeric"
+      >
+      <span class="recap-percent-unit">%</span>
+    </div>
+  </div>
+
+  <!-- 第二层:今日累计 + 里程碑(不计分,只反馈) -->
+  <div class="recap-layer recap-today-layer hidden" id="recapTodayLayer">
+    <div class="recap-today-text" id="recapTodayText"></div>
+    <div class="recap-today-milestone hidden" id="recapTodayMilestone"></div>
+  </div>
+
+  <!-- 第三层:Streak 火苗 -->
+<div class="recap-layer recap-streak-layer hidden" id="recapStreakLayer">
+  <div class="recap-streak-icon" id="recapStreakIcon">🔥</div>
+  <div class="recap-streak-main" id="recapStreakMain"></div>
+  <div class="recap-streak-sub" id="recapStreakSub"></div>
+</div>
+
+  <!-- 第四层:完读庆祝(只在跨 100% 时出现) -->
+<div class="recap-layer recap-finish-layer hidden" id="recapFinishLayer">
+  <div class="recap-finish-icon">📖</div>
+  <div class="recap-finish-main">读完了</div>
+  <div class="recap-finish-book" id="recapFinishBook"></div>
+</div>
+
+  <div class="recap-actions">
+    <button id="skipProgressBtn" class="btn btn-secondary">跳过</button>
+    <button id="saveProgressBtn" class="btn btn-primary">完成</button>
+  </div>
+</section>
+<!-- 管理书籍页 -->
+<section id="manageBooksView" class="hidden">
+  <div class="manage-header">
+    <button id="manageBackBtn" class="btn-text">← 返回</button>
+    <h2 class="manage-title">书籍</h2>
+    <button id="manageAddBtn" class="btn-text">+ 添加</button>
+  </div>
+
+  <div id="manageBooksList" class="manage-books-list"></div>
+</section>
+
+<!-- 书籍详情页 -->
+<section id="bookDetailView" class="hidden">
+  <div class="manage-header">
+    <button id="detailBackBtn" class="btn-text">← 返回</button>
+    <h2 class="manage-title">书籍详情</h2>
+    <span style="width: 4rem;"></span><!-- 占位,让标题居中 -->
+  </div>
+
+  <div class="detail-header">
+    <div class="detail-title" id="detailTitle"></div>
+    <div class="detail-byline" id="detailByline"></div>
+  </div>
+
+  <div class="detail-stats">
+    <div class="detail-stat">
+      <div class="detail-stat-value" id="detailPercent">0%</div>
+      <div class="detail-stat-label">当前进度</div>
+    </div>
+    <div class="detail-stat">
+      <div class="detail-stat-value" id="detailTotalTime">0 分钟</div>
+      <div class="detail-stat-label">总时长</div>
+    </div>
+    <div class="detail-stat">
+      <div class="detail-stat-value" id="detailSessionCount">0</div>
+      <div class="detail-stat-label">次数</div>
+    </div>
+  </div>
+
+  <div class="detail-abandon-reason hidden" id="detailAbandonReason"></div>
+
+  <div class="detail-actions" id="detailActions"></div>
+
+  <h3 class="section-title detail-sessions-title">阅读记录</h3>
+  <div class="detail-sessions" id="detailSessions"></div>
+</section>
+
+<!-- 选书层(sheet) -->
+  <div id="bookPickerSheet" class="sheet hidden">
+    <div class="sheet-backdrop"></div>
+    <div class="sheet-panel">
+      <div class="sheet-handle"></div>
+      <h2 class="sheet-title">读哪本?</h2>
+      <div id="bookPickerList" class="book-picker-list"></div>
+    </div>
+  </div>
+
+  <!-- 弃读原因 sheet -->
+  <div id="abandonSheet" class="sheet hidden">
+    <div class="sheet-backdrop"></div>
+    <div class="sheet-panel">
+      <div class="sheet-handle"></div>
+      <h2 class="sheet-title">为什么放下?</h2>
+      <div id="abandonReasonList" class="abandon-reason-list">
+        <button class="abandon-reason-item" data-reason="文字晦涩难懂或翻译不好">
+          文字晦涩难懂或翻译不好
+        </button>
+        <button class="abandon-reason-item" data-reason="主题不感兴趣">
+          主题不感兴趣
+        </button>
+        <button class="abandon-reason-item" data-reason="太长了没耐心">
+          太长了没耐心
+        </button>
+        <button class="abandon-reason-item" data-reason="不适合现在的我">
+          不适合现在的我
+        </button>
+        <button class="abandon-reason-item" data-reason="其他">
+          其他
+        </button>
+      </div>
+
+      <div id="abandonOtherWrap" class="abandon-other-wrap hidden">
+        <input
+          type="text"
+          id="abandonOtherInput"
+          class="abandon-other-input"
+          placeholder="想说点什么?(选填)"
+          maxlength="100"
+        >
+      </div>
+
+      <div class="abandon-actions">
+        <button id="abandonCancelBtn" class="btn btn-secondary">取消</button>
+        <button id="abandonConfirmBtn" class="btn btn-warning" disabled>确认弃读</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 月总结页 -->
+<section id="monthSummaryView" class="hidden">
+  <div class="month-header">
+    <button id="monthBackBtn" class="btn-text">← 返回</button>
+    <div class="month-nav">
+      <button id="monthPrevBtn" class="month-nav-btn" aria-label="上一月">‹</button>
+      <span id="monthLabel" class="month-label">2026 年 4 月</span>
+      <button id="monthNextBtn" class="month-nav-btn" aria-label="下一月">›</button>
+    </div>
+    <span class="month-header-spacer"></span>
+  </div>
+
+  <!-- Hero -->
+  <div class="month-hero">
+    <div class="month-hero-text" id="monthHeroText"></div>
+  </div>
+
+  <!-- 这个月读过的书 -->
+  <section class="month-section">
+    <h3 class="month-section-title">这个月读过的书</h3>
+    <div id="monthBookList" class="month-book-list"></div>
+  </section>
+
+  <!-- 记录 -->
+  <section class="month-section" id="monthRecordsSection">
+    <h3 class="month-section-title">记录</h3>
+    <div class="month-records">
+      <div class="month-record" id="monthLongestSession"></div>
+      <div class="month-record" id="monthFocusedDay"></div>
+    </div>
+  </section>
+
+  <!-- 热力图 -->
+  <section class="month-section">
+    <h3 class="month-section-title">每日</h3>
+    <div id="monthHeatmap" class="month-heatmap"></div>
+    <div class="month-heatmap-legend">
+      <span class="heatmap-cell heatmap-cell-empty"></span>
+      <span class="heatmap-legend-text">没读 / 不到 10 分钟</span>
+      <span class="heatmap-cell heatmap-cell-lit"></span>
+      <span class="heatmap-legend-text">读了 10 分钟以上</span>
+    </div>
+  </section>
+
+  <!-- Streak -->
+  <section class="month-section">
+    <h3 class="month-section-title">连续</h3>
+    <div class="month-streak-row">
+      <div class="month-streak-stat">
+        <div class="month-streak-value" id="monthStreakDays">0</div>
+        <div class="month-streak-label">天达标</div>
+      </div>
+      <div class="month-streak-stat">
+        <div class="month-streak-value" id="monthLongestStreak">0</div>
+        <div class="month-streak-label">最长连续</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 环比 -->
+  <section class="month-section">
+    <h3 class="month-section-title">和上月相比</h3>
+    <div id="monthComparison" class="month-comparison"></div>
+  </section>
+</section>
+</main>
+
+
+
+  <!-- 完读庆祝遮罩(详情页"完读"按钮入口走这里) -->
+  <div id="finishCelebration" class="modal hidden">
+    <div class="finish-celebration-content">
+      <div class="recap-finish-icon">📖</div>
+      <div class="recap-finish-main">读完了</div>
+      <div class="recap-finish-book" id="finishCelebrationBook"></div>
+      <button id="finishCelebrationOkBtn" class="btn btn-primary finish-celebration-btn">继续</button>
+    </div>
+  </div>
+
+  <!-- 添加书的 modal -->
+  <div id="addBookModal" class="modal hidden">
+    <div class="modal-content">
+      <h2>添加新书</h2>
+      <label>
+        书名 <span class="required">*</span>
+        <input type="text" id="bookTitle" placeholder="例:三体">
+      </label>
+     <label>
+  作者
+  <input type="text" id="bookAuthor" placeholder="选填">
+</label>
+<label>
+  译者
+  <input type="text" id="bookTranslator" placeholder="选填,如果是译作">
+</label>
+      <label>
+        当前进度(%)
+        <input type="number" id="bookPercent" min="0" max="100" value="0">
+      </label>
+      <div class="modal-actions">
+        <button id="cancelBookBtn" class="btn btn-secondary">取消</button>
+        <button id="saveBookBtn" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 计时器我们暂时藏起来,下一块再接回来 -->
+
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+</body>
+>>>>>>> Stashed changes
 </html>
