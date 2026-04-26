@@ -635,8 +635,16 @@ h1 {
 }
 
 /* done 状态:环走满,中间数字加一点呼吸 */
+/* done 状态:环走满,中间是燃起的火焰 */
 .streak-ring.is-done {
   --ring-color: #4ade80;
+}
+.streak-ring.is-done .streak-ring-number {
+  /* emoji 不需要那么大,跟 empty 状态的木桩字号对齐 */
+  font-size: 3.5rem;
+  font-weight: 400;
+  /* 火焰轻微跳动,跟结算页那层节奏一致(streakFlicker 已在样式里定义) */
+  animation: streakFlicker 1.6s ease-in-out infinite;
 }
 
 /* short 状态:环走到一部分,颜色稍暗 */

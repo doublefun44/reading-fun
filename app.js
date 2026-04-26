@@ -311,16 +311,17 @@ function renderStreakRing() {
   // 清掉之前的状态 class
   streakRingEl.classList.remove('is-empty', 'is-short', 'is-done', 'has-flame');
 
-  if (todayMs >= threshold) {
-    // done:环走满,中间是 streak 天数
-    streakRingEl.classList.add('is-done');
-    streakRingEl.style.setProperty('--progress', '360deg');
-    streakRingNumberEl.textContent = streak;
-    streakRingLabelEl.textContent = '连续';
-    streakRingLabelEl.style.display = '';
-    streakRingHintEl.textContent = `今天 ${formatDuration(todayMs)} ✓`;
-    return;
-  }
+if (todayMs >= threshold) {
+  // done:今天达标,木桩点燃成火焰。streak 数字挪到 hint 里
+  streakRingEl.classList.add('is-done');
+  streakRingEl.style.setProperty('--progress', '360deg');
+  streakRingNumberEl.textContent = '🔥';
+  streakRingLabelEl.style.display = 'none';
+  // streak >= 1(因为今天已达标,calcStreak 至少返回 1),直接显示
+  streakRingHintEl.textContent = `连续 ${streak} 天 · 今天 ${formatDuration(todayMs)} ✓`;
+  return;
+}
+
 
   if (todayMs >= 60000) {
     // short:今天读了但还没到门槛
