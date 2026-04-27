@@ -420,7 +420,7 @@ if (todayMs >= threshold) {
     // 暗火:有 streak 但今天还没开始,火苗暗着等今天点
     streakRingEl.classList.add('has-flame');
     streakRingNumberEl.textContent = '🔥';
-    streakRingHintEl.textContent = `连续 ${streak} 天 · 今天还没开始`;
+    streakRingHintEl.textContent = `连续 ${streak} 天 · 读 10 分钟保住火焰`;
   } else {
     // 木桩:火从来没点过(或之前已经熄过了)
     streakRingNumberEl.textContent = '🪵';
