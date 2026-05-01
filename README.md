@@ -117,7 +117,33 @@ GitHub Pages 部署
   有火时盖上今天,没火时清掉。同一天不触发,避免结算页回首页这种短间隔误触发
 - 动画:1.6s,CSS keyframes 走完整段,JS 在 ~1.0s 处把 🔥 换成 🪵
   衔接的是 keyframes 里 60→62% 的透明窗口,看不到硬切
-- 文案在 hint 里,加 .is-extinguish-msg 类(琥珀色 + 延迟淡入),克制但能看出是个事件
-- - 暗火状态(有 streak 但今天没读)文案从"今天还没开始"
+=======
+
+- 暗火状态(有 streak 但今天没读)文案从"今天还没开始"
   改成"读 10 分钟保住火焰":前者太被动,容易被读成 bug;
   跟木桩状态"读 10 分钟点燃今天"形成"点燃 vs 保住"的对仗
+
+ - [ ] Stage 8: 想读书单 + 完读后下一本提示
+  - [x] Step 1-5: SCHEMA_VERSION 升 3 + 添加 modal 分段控件 + 管理页 wishlist section + 字段清理 + getNextBookSuggestion 数据层
+  - [x] Step 6: 结算页第五层 UI(多本同显)
+  - [ ] Step 7: 回归测试
+
+## Stage 8 Notes
+- SCHEMA_VERSION 3:新增 status='wishlist' 第四态 + addedToWishlistAt 字段(所有 book 都有,非 wishlist 时为 null)
+- Wishlist 写入硬上限 10 本(导入备份不限,宽进严出)
+- 状态转换:wishlist → 任何状态都经过 reading;转走时清 addedToWishlistAt
+- 完读第五层:getNextBookSuggestion 返回 Array<{book, copy, tier}>,空数组代表整层不渲染
+- 多本同显规则:P1(在读 60-99%)/ P2(wishlist ≥30 天)/ P3(同作者)各最多一本,P2/P3 之间用 pickedIds 去重
+- pendingRecap 加 book 快照供第五层用;用户提前点"继续"清掉 pendingRecap,setTimeout 回调进来直接 return,第五层不会迟到
+- 设计文档 stage8-design-decisions.md 是 Stage 8 的真相源,README 这里只记关键 Notes
+
+
+## Backlog / 未排期想法
+
+- 月报加弃读摘要(本月弃读 N 本 + 原因列表)
+  - 张力:月报现在是"陪伴"叙事(和 N 本书共度 X 时长),弃读是"放下",直接并列会冲突
+  - 已有的弃读出口:管理页"已弃读"分组、累计 ≥3 本解锁的"放下的书"分析页(跨时间,非按月)
+  - 顾虑:单月样本小波动大,按月切片容易滑向 dashboard 化,和"温和自我观察"的定调冲突
+  - 如果做:倾向月报底部低调小卡片,不进 hero/书列表层级
+  - 决策:暂缓,等 Stage 8 完成后再看是否还想要
+
