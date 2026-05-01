@@ -506,8 +506,30 @@ h1 {
 .recap-finish-icon {
   font-size: 3rem;
   line-height: 1;
-  /* 轻微的"合上书"感:从下往上浮一下,不闪不抖 */
-  animation: finishIconIn 0.7s ease-out;
+  /* 翻开-合上:浮起 → 停一拍 → 合上(📖→📕)→ 淡出留尾 */
+  animation: finishIconIn 1.5s ease-out forwards;
+}
+
+/* 用伪元素装 emoji,keyframe 才能切 content */
+.recap-finish-icon::before {
+  content: '📖';
+  animation: finishIconSwap 1.5s ease-out forwards;
+}
+
+/* 主动画:整体的浮起 / 停顿 / 缩放 / 淡出 */
+@keyframes finishIconIn {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.9); }
+  25%  { opacity: 1; transform: translateY(0)  scale(1.1); }   /* 浮起 + 放大 */
+  55%  { opacity: 1; transform: translateY(0)  scale(1.1); }   /* 停一拍 */
+  60%  { opacity: 0.05; transform: translateY(0) scale(1.05); } /* 透明窗口,准备切 emoji */
+  80%  { opacity: 1; transform: translateY(0) scale(1); }      /* 合上后的 📕 现身 */
+  100% { opacity: 0.7; transform: translateY(0) scale(1); }    /* 留尾,不完全消失 */
+}
+
+/* emoji 切换:只在主动画的"透明窗口"那一帧切,避免硬切被看到 */
+@keyframes finishIconSwap {
+  0%, 60%   { content: '📖'; }
+  61%, 100% { content: '📕'; }
 }
 
 @keyframes finishIconIn {
@@ -525,6 +547,40 @@ h1 {
   font-size: 1rem;
   opacity: 0.55;
   margin-top: 0.25rem;
+}
+
+/* ===== 结算页 - 下一本建议层(第五层) ===== */
+/* 容器:整体顶部一条更淡的分隔线,内部 1-3 段竖排,段与段之间 1.5rem 间距 */
+.recap-next-layer {
+  animation: none;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  width: 100%;
+  max-width: 320px;
+}
+
+/* 单段:文案 + 按钮,段内 1rem 间距,文案和按钮都居中 */
+.recap-next-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.recap-next-text {
+  font-size: 1.25rem;
+  font-weight: 300;
+  text-align: center;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.recap-next-btn {
+  max-width: 200px;
+  width: 100%;
 }
 
 /* ===== 完读庆祝遮罩(详情页入口) ===== */
@@ -1110,6 +1166,16 @@ h1 {
   margin-right: 0.5rem;
 }
 
+/* 完读印记:跟弃读原因对称的一行,但语气更轻 */
+.detail-finished-note {
+  text-align: center;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+  opacity: 0.7;
+  letter-spacing: 0.02em;
+}
+
 .detail-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1566,6 +1632,8 @@ h1 {
   margin-top: 0.4rem;
   letter-spacing: 0.02em;
   line-height: 1.5;
+  /* 文案里 \n 直接折行,给 wishlist 满 10 本那种两行文案用 */
+  white-space: pre-line;
   /* 出现时柔和,跟 sheet 风格一致 */
   animation: recapFadeIn 0.25s ease-out;
 }
@@ -1588,6 +1656,35 @@ h1 {
   width: 100%;
   /* 出现时柔和 */
   animation: recapFadeIn 0.25s ease-out;
+}
+
+/* ----- 意图分段控件:📖 直接读 / 📚 先放想读 ----- */
+.modal-segmented {
+  display: flex;
+  gap: 0.5rem;
+  background: #0f172a;       /* 沿用 input 底色,跟 modal 形成层次 */
+  padding: 0.3rem;
+  border-radius: 10px;
+  margin-bottom: 0.25rem;     /* 让它和书名 label 之间有点呼吸 */
+}
+
+.modal-segmented-option {
+  flex: 1;
+  padding: 0.7rem 0.5rem;
+  font-size: 0.95rem;
+  background: transparent;
+  color: #eaeaea;
+  opacity: 0.55;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.modal-segmented-option.is-active {
+  background: #16213e;        /* 跟 modal 底色相同,产生"被选中浮起"的错觉 */
+  opacity: 1;
 }
 /* ===== 放下的书 · 弃读分析页 ===== */
 #abandonedReviewView {
@@ -1760,4 +1857,112 @@ h1 {
   font-size: 0.85rem;
   opacity: 0.55;
   font-variant-numeric: tabular-nums;
+}
+/* ===== 想读 section ===== */
+/* 复用 .manage-group 容器样式,这里只加微调 */
+
+/* 顶部召唤:不是按钮,就是温和的一行字。
+   只在"待最久那本 > 180 天"时才出现,所以语气可以稍微凸出一点,
+   但不用警告色块——保持"召唤"而非"警告"的语气 */
+.wishlist-callout {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  padding: 0.6rem 0.2rem 0.9rem;
+  letter-spacing: 0.02em;
+  /* 借一点暖色暗示"等待"的情感,但克制,不抢卡片注意力 */
+  color: #fbbf24;
+  opacity: 0.7;
+}
+
+/* 卡片:比 .manage-book-item 略简单——没有时长统计、不可点击 */
+.wishlist-card {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* 标题行:title 占满 + × 按钮贴右 */
+.wishlist-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wishlist-card-header .wishlist-card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* × 按钮:低饱和灰,触控区 32px,不抢"开读"绿色按钮的视觉 */
+.btn-wishlist-delete {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 1.4rem;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.btn-wishlist-delete:active {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wishlist-card-title {
+  font-size: 1.05rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wishlist-card-author {
+  font-size: 0.85rem;
+  opacity: 0.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 时间文案 + 开读按钮一行,左右分布 */
+.wishlist-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.35rem;
+  /* 当时间文案为空(< 30 天)时,按钮自然贴右边 */
+}
+
+.wishlist-card-time {
+  font-size: 0.85rem;
+  opacity: 0.55;
+  letter-spacing: 0.02em;
+}
+
+/* 卡片右下小号 primary 按钮:不抢戏,但是明确的入口 */
+.btn-wishlist-start {
+  background: #4ade80;
+  color: #0f172a;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, opacity 0.15s;
+  margin-left: auto;  /* 时间文案为空时也保证按钮在右边 */
+}
+
+.btn-wishlist-start:active {
+  transform: scale(0.96);
+  opacity: 0.9;
 }

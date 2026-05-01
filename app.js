@@ -14,10 +14,13 @@ const bookTitleInput = document.getElementById('bookTitle');
 const bookAuthorInput = document.getElementById('bookAuthor');
 const bookTranslatorInput = document.getElementById('bookTranslator');
 const bookPercentInput = document.getElementById('bookPercent');
+const bookPercentField = document.getElementById('bookPercentField');
 const saveBookBtn = document.getElementById('saveBookBtn');
 const cancelBookBtn = document.getElementById('cancelBookBtn');
 const bookTitleHint = document.getElementById('bookTitleHint');
 const bookGoRestartBtn = document.getElementById('bookGoRestartBtn');
+const bookGoWishlistBtn = document.getElementById('bookGoWishlistBtn');
+const bookIntentSegmented = document.getElementById('bookIntentSegmented');
 
 const progressView = document.getElementById('progressView');
 const recapDurationEl = document.getElementById('recapDuration');
@@ -33,6 +36,7 @@ const recapStreakMain = document.getElementById('recapStreakMain');
 const recapStreakSub = document.getElementById('recapStreakSub');
 const recapFinishLayer = document.getElementById('recapFinishLayer');
 const recapFinishBookEl = document.getElementById('recapFinishBook');
+const recapNextLayer = document.getElementById('recapNextLayer');
 const saveProgressBtn = document.getElementById('saveProgressBtn');
 const skipProgressBtn = document.getElementById('skipProgressBtn');
 
@@ -74,6 +78,7 @@ const detailPercentEl = document.getElementById('detailPercent');
 const detailTotalTimeEl = document.getElementById('detailTotalTime');
 const detailSessionCountEl = document.getElementById('detailSessionCount');
 const detailAbandonReasonEl = document.getElementById('detailAbandonReason');
+const detailFinishedNoteEl = document.getElementById('detailFinishedNote');
 const detailActionsEl = document.getElementById('detailActions');
 const detailSessionsEl = document.getElementById('detailSessions');
 
@@ -534,6 +539,7 @@ function renderManageBooks() {
     reading: [],
     finished: [],
     abandoned: [],
+    wishlist: [],   // ← 加这一行
   };
   for (const b of books) {
     const status = b.status || 'reading';  // 兜底,以防有老数据漏字段
@@ -541,10 +547,12 @@ function renderManageBooks() {
     else groups.reading.push(b);  // 未知 status 也归到在读,不丢书
   }
 
-  // 每组里按 createdAt 倒序
-  for (const k of Object.keys(groups)) {
+  // 在读 / 已完读 / 已弃读:按 createdAt 倒序(新加的在上)
+  for (const k of ['reading', 'finished', 'abandoned']) {
     groups[k].sort((a, b) => b.createdAt - a.createdAt);
   }
+  // 想读:按 addedToWishlistAt 升序(待最久的在最上面,符合"召唤动线")
+  groups.wishlist.sort((a, b) => a.addedToWishlistAt - b.addedToWishlistAt);
 
   if (books.length === 0) {
     manageBooksListEl.innerHTML = `
@@ -560,10 +568,10 @@ function renderManageBooks() {
   manageBooksListEl.innerHTML = `
     ${renderAbandonedReviewEntry(groups.abandoned.length)}
     ${renderManageGroup('在读', groups.reading, statsByBook)}
+    ${renderWishlistSection(groups.wishlist)}
     ${renderManageGroup('已完读', groups.finished, statsByBook)}
     ${renderManageGroup('已弃读', groups.abandoned, statsByBook)}
   `;
-
   // 入口的点击事件
   const entryEl = manageBooksListEl.querySelector('#manageAbandonedEntry');
   if (entryEl) {
@@ -577,6 +585,128 @@ function renderManageBooks() {
       openBookDetail(id);
     });
   });
+
+  // 想读卡片上的"📖 开读"按钮:wishlist → reading,直接进计时器
+  // 卡片本身不绑点击(wishlist 没有阅读历史/进度可看,详情页没意义),
+  // 唯一出口就是这个按钮——和设计文档"想读=接下来要读的"语义一致
+  manageBooksListEl.querySelectorAll('.btn-wishlist-start').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleStartFromWishlist(btn.dataset.bookId);
+    });
+  });
+}
+
+// 想读卡片右上角 ×:从想读里移除。confirm 防误触。
+manageBooksListEl.querySelectorAll('.btn-wishlist-delete').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleDeleteFromWishlist(btn.dataset.bookId);
+  });
+});
+
+// ===== 想读 section =====
+
+// 卡片的时间档位文案。返回 null 表示"刚加的"——这一行整体不渲染,
+// 让卡片只剩书名+开读按钮,符合"没匹配上就不显示"的产品原则。
+function getWishlistTimeText(addedAt) {
+  if (typeof addedAt !== 'number') return null;
+  const days = Math.floor((Date.now() - addedAt) / (24 * 60 * 60 * 1000));
+  if (days < 30) {
+    // 蜜月期:不催,只显事实——加入日期
+    const d = new Date(addedAt);
+    return `${d.getMonth() + 1} 月 ${d.getDate()} 日 加入`;
+  }
+  if (days <= 90) return '超过一个月了';
+  if (days <= 180) return '一个季度过去了';
+  return '超过大半年了';
+}
+
+// 顶部召唤。只在"待最久那本 > 180 天"时升级成召唤;
+// 30-180 天档不渲染——卡片自己的时间文案已经在说话,顶部不重复催。
+// 入参是按 addedToWishlistAt 升序排好的 wishlist。
+function getWishlistCallout(books) {
+  if (books.length === 0) return null;
+  const oldest = books[0];
+  if (typeof oldest.addedToWishlistAt !== 'number') return null;
+  const days = Math.floor((Date.now() - oldest.addedToWishlistAt) / (24 * 60 * 60 * 1000));
+  if (days <= 180) return null;
+  return `《${oldest.title}》等了你超过半年了,读它?`;
+}
+
+// 想读 section。0 本时整段不渲染。
+// 卡片要素:书名 / 作者(没填不渲染) / 时间档位文案(< 30 天不渲染) / 📖 开读
+function renderWishlistSection(books) {
+  if (books.length === 0) return '';
+
+  const callout = getWishlistCallout(books);
+  const calloutHtml = callout
+    ? `<div class="wishlist-callout">${callout}</div>`
+    : '';
+
+  const cardsHtml = books.map(b => {
+    const timeText = getWishlistTimeText(b.addedToWishlistAt);
+    const authorHtml = b.author
+      ? `<div class="wishlist-card-author">${b.author}</div>`
+      : '';
+    const timeHtml = timeText
+      ? `<span class="wishlist-card-time">${timeText}</span>`
+      : '';
+    return `
+  <div class="wishlist-card">
+    <div class="wishlist-card-header">
+      <div class="wishlist-card-title">《${b.title}》</div>
+      <button class="btn-wishlist-delete" data-book-id="${b.id}" aria-label="从想读里移除">×</button>
+    </div>
+    ${authorHtml}
+    <div class="wishlist-card-row">
+      ${timeHtml}
+      <button class="btn-wishlist-start" data-book-id="${b.id}">📖 开读</button>
+    </div>
+  </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="manage-group manage-wishlist">
+      <h3 class="manage-group-title">想读 · ${books.length}</h3>
+      ${calloutHtml}
+      ${cardsHtml}
+    </div>
+  `;
+}
+
+// 想读 → 在读,直接进计时器(跳过 picker)。
+// 清 addedToWishlistAt,让"addedToWishlistAt !== null 严格等价于
+// status === 'wishlist'"成立,跟设计文档约定一致。
+function handleStartFromWishlist(bookId) {
+  if (!bookId) return;
+  const books = storage.getBooks();
+  const book = books.find(b => b.id === bookId);
+  if (!book) return;  // 静默防御:理论上不会发生
+
+  book.status = 'reading';
+  book.addedToWishlistAt = null;
+  storage.saveBooks(books);
+
+  // 关管理页 → 直接进计时器。stopSession 之后回到的就是首页,语义一致。
+  closeManageBooks();
+  startSession(bookId);
+}
+
+// 想读 → 移除。想读没阅读历史/sessions,直接从 books 数组里删掉。
+function handleDeleteFromWishlist(bookId) {
+  if (!bookId) return;
+  const books = storage.getBooks();
+  const book = books.find(b => b.id === bookId);
+  if (!book) return;
+
+  const ok = confirm(`确定从想读里移除《${book.title}》吗?`);
+  if (!ok) return;
+
+  const next = books.filter(b => b.id !== bookId);
+  storage.saveBooks(next);
+  renderManageBooks();
 }
 
 function renderManageGroup(title, books, statsByBook) {
@@ -802,6 +932,14 @@ function renderBookDetail() {
     detailAbandonReasonEl.classList.add('hidden');
   }
 
+  // 完读印记:对称弃读原因,但语气更轻
+  if (book.status === 'finished' && book.finishedAt) {
+    detailFinishedNoteEl.classList.remove('hidden');
+    detailFinishedNoteEl.textContent = `${formatFinishedDate(book.finishedAt)},你读完了这本书。`;
+  } else {
+    detailFinishedNoteEl.classList.add('hidden');
+  }
+
   // 操作按钮
   renderDetailActions(book);
 
@@ -881,13 +1019,22 @@ function handleRestartReading(bookId) {
   const book = books.find(b => b.id === bookId);
   if (!book) return;
 
+  // 完读重启 → 进度清零(再读一遍);弃读重启 → percent 保留(60% 弃读还是 60%)
+  if (book.status === 'finished') {
+    book.percent = 0;
+  }
+
   book.status = 'reading';
   book.finishedAt = null;
   book.abandonReason = null;
+  book.addedToWishlistAt = null;
   // percent 故意不动:60% 弃读的,重启后还是 60%
 
   storage.saveBooks(books);
-  renderBookDetail();  // 当场刷新,按钮变了
+
+  // 关详情页 → 直接进计时器,跟 handleStartFromWishlist 套路一致
+  closeBookDetail();
+  startSession(bookId);
 }
 
 // 详情页里删除:删完直接退回管理页
@@ -951,6 +1098,11 @@ function renderMonthHeader(monthKey) {
   monthLabelEl.textContent = formatMonthLabel(monthKey);
   monthPrevBtn.disabled = !canNavigateToMonth(getPrevMonthKey(monthKey));
   monthNextBtn.disabled = !canNavigateToMonth(getNextMonthKey(monthKey));
+}
+
+function formatFinishedDate(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
 // ----- 子渲染:Hero 文案 -----
@@ -1292,6 +1444,7 @@ function stopSession() {
     session: newSession,
     todayMsBefore,
     percentBefore: book.percent,
+    book,
   };
 
   recapDurationEl.textContent = formatDuration(duration);
@@ -1327,8 +1480,38 @@ function deleteBook(bookId) {
 
 
 // ===== 添加书 Modal =====
+
+// wishlist 写入上限。导入旧备份不受这条限制(宽进严出)。
+const WISHLIST_MAX = 10;
+
+// 读取当前选中的意图:'reading' | 'wishlist'
+function getCurrentIntent() {
+  const active = bookIntentSegmented.querySelector('.modal-segmented-option.is-active');
+  return active ? active.dataset.intent : 'reading';
+}
+
+// 切换意图。切到 wishlist 时进度字段消失并归 0;切回 reading 时显示。
+// 设计上不做记忆(切来切去太罕见,做记忆是过度设计)。
+function setIntent(intent) {
+  bookIntentSegmented.querySelectorAll('.modal-segmented-option').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.intent === intent);
+  });
+  if (intent === 'wishlist') {
+    bookPercentField.classList.add('hidden');
+    bookPercentInput.value = '0';
+  } else {
+    bookPercentField.classList.remove('hidden');
+    bookPercentInput.value = '0';
+  }
+  // 切意图时清掉之前的查重提示和次级按钮——因为查重判定可能已经变了
+  hideTitleHint();
+  hideSecondaryActions();
+}
+
 function openModal() {
   addBookModal.classList.remove('hidden');
+  // 每次打开都重置到默认意图(直接读),避免上次切到 wishlist 还残留
+  setIntent('reading');
   bookTitleInput.focus();
 }
 
@@ -1339,7 +1522,10 @@ function closeModal() {
   bookTranslatorInput.value = '';
   bookPercentInput.value = '0';
   hideTitleHint();
-  hideRestartAction();
+  hideSecondaryActions();
+  // 保存按钮可能被"看想读"顶替过,复位
+  saveBookBtn.classList.remove('hidden');
+  bookGoWishlistBtn.classList.add('hidden');
   // 如果管理页正开着,刷新一下;否则保持原行为(saveBook 那边会调 renderBooks)
   if (!manageBooksView.classList.contains('hidden')) {
     renderManageBooks();
@@ -1353,6 +1539,8 @@ function saveBook() {
     return;
   }
 
+  const intent = getCurrentIntent();
+
   // 查重:书名忽略大小写和首尾空格
   // 中文没大小写,但顺手统一一下,将来加英文书也兼容
   const normalized = title.toLowerCase();
@@ -1362,18 +1550,74 @@ function saveBook() {
 
   if (existing) {
     const status = existing.status || 'reading';
-    if (status === 'abandoned') {
-      // 已弃读:温和引导,显示提示 + 露出"去重新开始读"按钮
-      showTitleHint(`《${existing.title}》之前弃读了`, 'soft');
-      showRestartAction(existing.id);
+
+    if (intent === 'reading') {
+      // 新加 reading + 已存在:三种分支
+      if (status === 'abandoned') {
+        // 已弃读:soft hint + "去重新开始读"
+        showTitleHint(`《${existing.title}》之前弃读了`, 'soft');
+        showRestartAction(existing.id);
+        return;
+      }
+      if (status === 'wishlist') {
+        // 想读里有:soft hint + "开读这本"(把 wishlist 转 reading,不新建)
+        showTitleHint(`《${existing.title}》在想读里`, 'soft');
+        showStartWishlistAction(existing.id);
+        return;
+      }
+      // reading / finished:挡住保存
+      const statusText = status === 'finished' ? '已完读' : '在读';
+      showTitleHint(`《${existing.title}》已经在书架里了(${statusText})`, 'block');
       return;
     }
-    // 在读 / 已完读:挡住保存,提示存在
-    const statusText = status === 'finished' ? '已完读' : '在读';
-    showTitleHint(`《${existing.title}》已经在书架里了(${statusText})`, 'block');
+
+    // intent === 'wishlist'
+    if (status === 'wishlist') {
+      showTitleHint(`《${existing.title}》已经在想读里了`, 'block');
+      return;
+    }
+    // 已经/曾经读过(reading / finished / abandoned),放想读没意义
+    showTitleHint(`《${existing.title}》已经在书架里了`, 'block');
     return;
   }
 
+  // 没查重命中,按 intent 写入
+
+  if (intent === 'wishlist') {
+    // wishlist 满 10 本:用"看想读"按钮顶替"保存"
+    const wishlistCount = storage.getBooks().filter(b => b.status === 'wishlist').length;
+    if (wishlistCount >= WISHLIST_MAX) {
+      showTitleHint(
+        '你已经攒了 10 本想读了\n它们一直在那等着——要不,从最久那本开始?',
+        'block'
+      );
+      saveBookBtn.classList.add('hidden');
+      bookGoWishlistBtn.classList.remove('hidden');
+      return;
+    }
+
+    const newBook = {
+      id: uuid(),
+      title,
+      author: bookAuthorInput.value.trim(),
+      translator: bookTranslatorInput.value.trim(),
+      percent: 0,
+      status: 'wishlist',
+      finishedAt: null,
+      abandonReason: null,
+      addedToWishlistAt: Date.now(),
+      createdAt: Date.now(),
+    };
+    const books = storage.getBooks();
+    books.push(newBook);
+    storage.saveBooks(books);
+
+    closeModal();
+    renderBooks();
+    return;
+  }
+
+  // intent === 'reading':保留原有 reading/finished 写入逻辑
   const initialPercent = Number(bookPercentInput.value) || 0;
   const newBook = {
     id: uuid(),
@@ -1383,6 +1627,7 @@ function saveBook() {
     percent: initialPercent,
     status: initialPercent >= 100 ? 'finished' : 'reading',
     finishedAt: initialPercent >= 100 ? Date.now() : null,
+    addedToWishlistAt: null,
     createdAt: Date.now(),
   };
 
@@ -1408,15 +1653,28 @@ function hideTitleHint() {
   bookTitleHint.textContent = '';
 }
 
-// 露出/收起"去重新开始读"按钮,顺便挂上目标 bookId
+// 露出"去重新开始读":对应"新加 reading + 已弃读"
 function showRestartAction(bookId) {
   bookGoRestartBtn.dataset.bookId = bookId;
+  bookGoRestartBtn.dataset.action = 'restart';
+  bookGoRestartBtn.textContent = '去重新开始读 →';
   bookGoRestartBtn.classList.remove('hidden');
 }
 
-function hideRestartAction() {
+// 露出"开读这本":对应"新加 reading + 已在 wishlist"
+function showStartWishlistAction(bookId) {
+  bookGoRestartBtn.dataset.bookId = bookId;
+  bookGoRestartBtn.dataset.action = 'startWishlist';
+  bookGoRestartBtn.textContent = '开读这本 →';
+  bookGoRestartBtn.classList.remove('hidden');
+}
+
+// 收起所有次级动作(切意图、改书名、关 modal 时都要清)
+function hideSecondaryActions() {
   bookGoRestartBtn.classList.add('hidden');
+  bookGoRestartBtn.textContent = '';
   delete bookGoRestartBtn.dataset.bookId;
+  delete bookGoRestartBtn.dataset.action;
 }
 
 // ===== 结算页 =====
@@ -1441,6 +1699,11 @@ function finishProgress() {
   // 隐藏并重置第四层(finish)
   recapFinishLayer.classList.add('hidden');
   recapFinishBookEl.textContent = '';
+
+  // 隐藏并重置第五层(next)。多段是 JS 动态生成的,直接清空 innerHTML
+  recapNextLayer.classList.add('hidden');
+  recapNextLayer.style.animation = '';
+  recapNextLayer.innerHTML = '';
 
   // 解锁第一层输入
   recapPercentAfterInput.disabled = false;
@@ -1514,6 +1777,9 @@ function playRecapSequence({ justFinished, bookTitle }) {
   // 第四层:只在跨过 100% 完读时出
   if (justFinished) {
     setTimeout(() => showFinishLayer(bookTitle), 1500);
+    // 第五层:下一本建议(finish 层之后再 +1500ms)
+    // showNextLayer 内部会 getNextBookSuggestion,没匹配上就静默不显示
+    setTimeout(showNextLayer, 1500 + 1500);
   }
 }
 
@@ -1582,6 +1848,62 @@ function showFinishLayer(bookTitle) {
   recapFinishLayer.style.animation = 'recapFadeIn 0.6s ease-out';
 }
 
+// 第五层:下一本建议(多段)
+// 守卫:pendingRecap 已被清(用户提前点了继续) → 整层不渲染
+// 没匹配上(getNextBookSuggestion 返回空数组) → 整层静默不渲染,绝不硬凑
+// 命中 1-3 段:每段渲染成"文案 + 开始读"卡片
+function showNextLayer() {
+  if (!pendingRecap) return;
+
+  const suggestions = getNextBookSuggestion(pendingRecap.book);
+  if (!suggestions || suggestions.length === 0) return;
+
+  // 用 DOM 而不是 innerHTML,避免书名里有特殊字符时被当成 HTML 解析
+  recapNextLayer.innerHTML = '';
+  for (const s of suggestions) {
+    const item = document.createElement('div');
+    item.className = 'recap-next-item';
+
+    const text = document.createElement('div');
+    text.className = 'recap-next-text';
+    text.textContent = s.copy;
+
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-secondary recap-next-btn';
+    btn.textContent = '开始读';
+    btn.dataset.bookId = s.book.id;
+
+    item.appendChild(text);
+    item.appendChild(btn);
+    recapNextLayer.appendChild(item);
+  }
+
+  recapNextLayer.classList.remove('hidden');
+  recapNextLayer.style.animation = 'recapFadeIn 0.6s ease-out';
+}
+
+// 第五层"开始读"点击(事件委托):wishlist 书顺手转 reading,然后无摩擦进计时器
+function handleNextStartClick(e) {
+  const btn = e.target.closest('.recap-next-btn');
+  if (!btn) return;
+  const bookId = btn.dataset.bookId;
+  if (!bookId) return;
+
+  const books = storage.getBooks();
+  const book = books.find(b => b.id === bookId);
+  if (!book) return;  // 静默防御
+
+  if (book.status === 'wishlist') {
+    book.status = 'reading';
+    book.addedToWishlistAt = null;
+    storage.saveBooks(books);
+  }
+
+  // 关结算页 → 进计时器(同 handleStartFromWishlist 的套路)
+  finishProgress();
+  startSession(bookId);
+}
+
 // 把底部两个按钮(跳过/完成)换成单个"继续"
 function setRecapButtonsToContinue() {
   skipProgressBtn.classList.add('hidden');
@@ -1613,19 +1935,53 @@ function closeFinishCelebration() {
 cancelBookBtn.addEventListener('click', closeModal);
 saveBookBtn.addEventListener('click', saveBook);
 stopBtn.addEventListener('click', stopSession);
-// 用户改书名时,清掉之前的提示和"去重新开始读"按钮
+recapNextLayer.addEventListener('click', handleNextStartClick);
+// 用户改书名时,清掉之前的查重提示和次级动作按钮
 bookTitleInput.addEventListener('input', () => {
   hideTitleHint();
-  hideRestartAction();
+  hideSecondaryActions();
+  // 改了书名,wishlist 上限拦截也可能不再适用——把"看想读"复位回"保存"
+  saveBookBtn.classList.remove('hidden');
+  bookGoWishlistBtn.classList.add('hidden');
 });
 
-// "去重新开始读":关 modal,跳那本书的详情页
+// 次级动作按钮:按 dataset.action 分发
+//   restart        → "新加 reading + 已弃读":跳详情页让用户走"重新开始读"
+//   startWishlist  → "新加 reading + 已在 wishlist":把 wishlist 转成 reading,跳详情页
 bookGoRestartBtn.addEventListener('click', () => {
   const bookId = bookGoRestartBtn.dataset.bookId;
+  const action = bookGoRestartBtn.dataset.action;
   if (!bookId) return;
+
+  if (action === 'startWishlist') {
+    // wishlist → reading,清 addedToWishlistAt(让"addedToWishlistAt !== null
+    // 严格等价于 status === 'wishlist'"成立,跟设计文档约定一致)
+    const books = storage.getBooks();
+    const book = books.find(b => b.id === bookId);
+    if (book) {
+      book.status = 'reading';
+      book.addedToWishlistAt = null;
+      storage.saveBooks(books);
+    }
+  }
+
   closeModal();
   // 'list' = 从详情页返回时回首页(用户本来就是从首页开 modal 的)
   openBookDetail(bookId, 'list');
+});
+
+// "看想读":wishlist 满 10 本的逃生口。关 modal、进管理页让用户看想读 section。
+// 管理页里 wishlist 区域的具体渲染是 Step 3+ 才做的事,这一步只保证跳转动作不报错。
+bookGoWishlistBtn.addEventListener('click', () => {
+  closeModal();
+  openManageBooks();
+});
+
+// 分段控件:点击切换意图
+bookIntentSegmented.addEventListener('click', (e) => {
+  const btn = e.target.closest('.modal-segmented-option');
+  if (!btn) return;
+  setIntent(btn.dataset.intent);
 });
 
 // 结算页两个按钮的初始绑定(saveProgress 还会被 resetRecapButtons 重新绑,这里先保证首次能用)

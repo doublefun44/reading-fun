@@ -182,10 +182,14 @@
 
   <!-- 第四层:完读庆祝(只在跨 100% 时出现) -->
 <div class="recap-layer recap-finish-layer hidden" id="recapFinishLayer">
-  <div class="recap-finish-icon">📖</div>
+  <div class="recap-finish-icon"></div>
   <div class="recap-finish-main">读完了</div>
   <div class="recap-finish-book" id="recapFinishBook"></div>
 </div>
+
+  <!-- 第五层:下一本建议(只在完读后,且 getNextBookSuggestion 命中至少一条时出现) -->
+  <!-- 内部 1-3 段由 JS 动态填充,每段 = 一段文案 + 一个"开始读"按钮 -->
+<div class="recap-layer recap-next-layer hidden" id="recapNextLayer"></div>
 
   <div class="recap-actions">
     <button id="skipProgressBtn" class="btn btn-secondary">跳过</button>
@@ -232,7 +236,9 @@
   </div>
 
   <div class="detail-abandon-reason hidden" id="detailAbandonReason"></div>
+  <div class="detail-finished-note hidden" id="detailFinishedNote"></div>
 
+  <div class="detail-finished-note hidden" id="detailFinishedNote"></div>
   <div class="detail-actions" id="detailActions"></div>
 
   <h3 class="section-title detail-sessions-title">阅读记录</h3>
@@ -392,7 +398,7 @@
   <!-- 完读庆祝遮罩(详情页"完读"按钮入口走这里) -->
   <div id="finishCelebration" class="modal hidden">
     <div class="finish-celebration-content">
-      <div class="recap-finish-icon">📖</div>
+      <div class="recap-finish-icon"></div>
       <div class="recap-finish-main">读完了</div>
       <div class="recap-finish-book" id="finishCelebrationBook"></div>
       <button id="finishCelebrationOkBtn" class="btn btn-primary finish-celebration-btn">继续</button>
@@ -403,6 +409,11 @@
   <div id="addBookModal" class="modal hidden">
     <div class="modal-content">
       <h2>添加新书</h2>
+      <!-- 意图分段:决定这本书直接进在读,还是先放想读 -->
+      <div class="modal-segmented" id="bookIntentSegmented" role="tablist">
+        <button type="button" class="modal-segmented-option is-active" data-intent="reading">📖 直接读</button>
+        <button type="button" class="modal-segmented-option" data-intent="wishlist">📚 先放想读</button>
+      </div>
       <label>
         书名 <span class="required">*</span>
         <input type="text" id="bookTitle" placeholder="例:三体">
@@ -416,15 +427,18 @@
   译者
   <input type="text" id="bookTranslator" placeholder="选填,如果是译作">
 </label>
-      <label>
+      <label id="bookPercentField">
         当前进度(%)
         <input type="number" id="bookPercent" min="0" max="100" value="0">
       </label>
       <div class="modal-actions">
         <button id="cancelBookBtn" class="btn btn-secondary">取消</button>
         <button id="saveBookBtn" class="btn btn-primary">保存</button>
+        <!-- wishlist 满 10 本时,顶替 saveBookBtn 出现 -->
+        <button id="bookGoWishlistBtn" class="btn btn-primary hidden">看想读</button>
       </div>
-      <button id="bookGoRestartBtn" class="btn-text-line modal-secondary-action hidden">去重新开始读 →</button>
+      <!-- 通用次级动作按钮:复用同一个 DOM,通过 dataset.action 区分行为 -->
+      <button id="bookGoRestartBtn" class="btn-text-line modal-secondary-action hidden"></button>
     </div>
   </div>
 

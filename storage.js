@@ -44,7 +44,7 @@ const storage = {
 };
 
 // 数据 schema 当前版本号。改字段了就 +1,并在 normalizeBook/Session 里加迁移
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 // 把任何来源(老数据 / 当前数据 / 未来数据)的 book 规整到当前 schema
 // 缺的字段补默认,多的字段直接保留(对未来字段宽容)
@@ -55,11 +55,23 @@ function normalizeBook(b) {
     author: typeof b.author === 'string' ? b.author : '',
     translator: typeof b.translator === 'string' ? b.translator : '',
     percent: typeof b.percent === 'number' ? b.percent : 0,
-    status: b.status || (b.percent >= 100 ? 'finished' : 'reading'),
+    // percent 和 status 强一致:percent>=100 必须是 finished(除非显式弃读/想读)
+// 防御:历史数据可能存在 percent=100 但 status=reading 的脏数据
+    status: (b.percent >= 100 && (b.status === 'reading' || !b.status))
+              ? 'finished'
+              : (b.status || (b.percent >= 100 ? 'finished' : 'reading')),
     finishedAt: typeof b.finishedAt === 'number' ? b.finishedAt
-                : (b.percent >= 100 ? (b.createdAt || Date.now()) : null),
+            : (b.percent >= 100 ? (b.createdAt || Date.now()) : null),
     abandonReason: b.abandonReason || null,
     createdAt: typeof b.createdAt === 'number' ? b.createdAt : Date.now(),
+    // 仅 wishlist 状态有真实时间戳,其他状态统一 null
+    // 兜底链:b.addedToWishlistAt → b.createdAt → Date.now()
+    // 兜底场景是将来导入旧版备份;当前老数据没有 wishlist 状态,所以现实里都会落到 null 分支
+    addedToWishlistAt: b.status === 'wishlist'
+      ? (typeof b.addedToWishlistAt === 'number'
+          ? b.addedToWishlistAt
+          : (typeof b.createdAt === 'number' ? b.createdAt : Date.now()))
+      : null,
   };
 }
 
@@ -224,6 +236,99 @@ function getRecapMilestones({ session, todayMsBefore }) {
   }
 
   return { todayText, milestone };
+}
+
+// ===== 结算页第五层:下一本建议 =====
+// 完读一本书后,按四级优先级匹配下一本:
+//   P1: 在读 + 进度高(percent ≥ 60),排除刚读完那本
+//   P2: wishlist 里 addedToWishlistAt 最早的,且至少等了 30 天
+//   P3: 同作者关联(刚读完书的作者在 wishlist 里有同作者的书)
+//   P4(兜底): 都没匹配 → null,不硬凑
+//
+// 入参:
+//   justFinishedBook   刚完读那本书的完整 book 对象(需要 id 排除自己,需要 author 做 P3)
+// 出参:
+//   Array<{ book, copy, tier }>     最多 3 项,空数组代表都没匹配上(UI 层判 length===0 整层不渲染)
+//     book: 被推荐那本的完整 book 对象(UI 拿来做"开始读"按钮的 dataset)
+//     copy: 已经填好书名/百分比/月份的成品文案,UI 直接 textContent 用
+//     tier: 'p1' | 'p2' | 'p3'(留个标识方便以后追踪,UI 层暂时不用)
+//
+// 设计原则:多本同显,P1/P2/P3 各最多取一本;同一本书不同时出现在 P2 和 P3(去重)
+function getNextBookSuggestion(justFinishedBook) {
+  if (!justFinishedBook || !justFinishedBook.id) return [];
+
+  const allBooks = storage.getBooks();
+  const selfId = justFinishedBook.id;
+  const result = [];
+  const pickedIds = new Set();  // 防 P2/P3 撞车(同一本 wishlist 等久 + 同作者)
+
+  // ---- P1: 在读 + 60% ≤ percent < 100,取 percent 最高那本(最接近收尾的优先) ----
+  const readingCandidates = allBooks
+    .filter(b => b.status === 'reading' && b.id !== selfId && b.percent >= 60 && b.percent < 100)
+    .sort((a, b) => b.percent - a.percent);
+
+  if (readingCandidates.length > 0) {
+    const book = readingCandidates[0];
+    const copy = book.percent >= 75
+      ? `《${book.title}》已经读了 ${book.percent}% 了,要不要一鼓作气把它收尾`
+      : `《${book.title}》已经读到一半多了,要不要接着它`;
+    result.push({ book, copy, tier: 'p1' });
+    pickedIds.add(book.id);
+  }
+
+  // ---- P2: wishlist 里等了 ≥ 30 天的,取最久那本 ----
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const wishlistAged = allBooks
+    .filter(b =>
+      b.status === 'wishlist' &&
+      b.id !== selfId &&
+      !pickedIds.has(b.id) &&
+      typeof b.addedToWishlistAt === 'number' &&
+      (now - b.addedToWishlistAt) >= 30 * DAY_MS
+    )
+    .sort((a, b) => a.addedToWishlistAt - b.addedToWishlistAt);
+
+  if (wishlistAged.length > 0) {
+    const book = wishlistAged[0];
+    const days = Math.floor((now - book.addedToWishlistAt) / DAY_MS);
+    let copy;
+    if (days >= 365) {
+      copy = `《${book.title}》已经在你想读里待了一整年`;
+    } else if (days >= 90) {
+      const months = Math.floor(days / 30);
+      copy = `《${book.title}》在你的想读里等了 ${months} 个月了呢`;
+    } else {
+      // 30 ≤ days < 90
+      copy = `《${book.title}》在你的想读里有一阵了`;
+    }
+    result.push({ book, copy, tier: 'p2' });
+    pickedIds.add(book.id);
+  }
+
+  // ---- P3: 同作者(wishlist 里有刚读完书的同作者书,不卡时间;排掉已被 P2 选走的) ----
+  const author = (justFinishedBook.author || '').trim();
+  if (author) {
+    const sameAuthor = allBooks
+      .filter(b =>
+        b.status === 'wishlist' &&
+        b.id !== selfId &&
+        !pickedIds.has(b.id) &&
+        (b.author || '').trim() === author
+      )
+      // 多本同作者时,等更久的优先
+      .sort((a, b) => (a.addedToWishlistAt || 0) - (b.addedToWishlistAt || 0));
+
+    if (sameAuthor.length > 0) {
+      const book = sameAuthor[0];
+      const copy = `你刚读完了${author},TA 的《${book.title}》还在你的想读里`;
+      result.push({ book, copy, tier: 'p3' });
+      pickedIds.add(book.id);
+    }
+  }
+
+  return result;
 }
 
 // ===== Streak 计算 =====
