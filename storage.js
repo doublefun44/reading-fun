@@ -615,6 +615,61 @@ function getMonthStats(monthKey) {
   };
 }
 
+// ===== Stage 11:月度总结尾句 =====
+// 返回 string[]:0-2 条数据尾句(完读句、想读句,顺序固定),
+// 两条都没有时返回 1 条平淡月尾句(按 monthKey 确定性轮换,同月每次一样)。
+// 该月无任何 session 返回空数组,尾句区整个不渲染。
+function getMonthEpilogue(monthKey) {
+  const { start, end } = getMonthRange(monthKey);
+
+  const hasSessions = storage.getSessions()
+    .some(s => s.startTime >= start && s.startTime < end);
+  if (!hasSessions) return [];
+
+  const books = storage.getBooks();
+  const finishedCount = books.filter(b =>
+    typeof b.finishedAt === 'number' && b.finishedAt >= start && b.finishedAt < end
+  ).length;
+  const wishlistCount = books.filter(b =>
+    b.status === 'wishlist'
+    && typeof b.addedToWishlistAt === 'number'
+    && b.addedToWishlistAt >= start && b.addedToWishlistAt < end
+  ).length;
+
+  // 对 monthKey 求简单字符和取模:三类句式都确定性轮换,同一个月永远同一句
+  let hash = 0;
+  for (const ch of monthKey) hash += ch.charCodeAt(0);
+
+  const lines = [];
+  if (finishedCount > 0) {
+    const FINISHED_LINES = [
+      (n) => `有 ${n} 本书读到了最后一页。`,
+      (n) => `${n} 本书在这个月走到了终点。`,
+      (n) => `你和 ${n} 本书好好道了别。`,
+    ];
+    lines.push(FINISHED_LINES[hash % FINISHED_LINES.length](finishedCount));
+  }
+  if (wishlistCount > 0) {
+    const WISHLIST_LINES = [
+      (n) => `你添进了 ${n} 本想读的书——往后的日子,有这么多相遇可以期待。`,
+      (n) => `想读的清单又长了 ${n} 本,未来有的是好时光。`,
+      (n) => `有 ${n} 本新书排进了想读——都是还没开始的故事。`,
+    ];
+    lines.push(WISHLIST_LINES[hash % WISHLIST_LINES.length](wishlistCount));
+  }
+
+  if (lines.length === 0) {
+    const CALM_LINES = [
+      '不多不少,是踏实的一个月。',
+      '书一直在,你也一直在。',
+      '安安静静读了一些,这样就很好。',
+    ];
+    lines.push(CALM_LINES[hash % CALM_LINES.length]);
+  }
+
+  return lines;
+}
+
 // ===== 环比上月 =====
 // 出参:
 // {

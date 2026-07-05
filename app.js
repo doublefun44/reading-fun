@@ -100,6 +100,7 @@ const monthPrevBtn = document.getElementById('monthPrevBtn');
 const monthNextBtn = document.getElementById('monthNextBtn');
 const monthLabelEl = document.getElementById('monthLabel');
 const monthHeroTextEl = document.getElementById('monthHeroText');
+const monthHeroEpilogueEl = document.getElementById('monthHeroEpilogue');
 const monthBookListEl = document.getElementById('monthBookList');
 const monthRecordsSection = document.getElementById('monthRecordsSection');
 const monthLongestSessionEl = document.getElementById('monthLongestSession');
@@ -1203,6 +1204,7 @@ function renderMonthSummary() {
 
   renderMonthHeader(currentMonthKey);
   renderMonthHero(stats);
+  renderMonthEpilogue(currentMonthKey);
   renderMonthBooks(stats);
   renderMonthRecords(stats);
   renderMonthHeatmap(stats);
@@ -1220,6 +1222,24 @@ function renderMonthHeader(monthKey) {
 function formatFinishedDate(ts) {
   const d = new Date(ts);
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+// ----- Stage 11:hero 下方的尾句(空数组时整个容器不显示) -----
+function renderMonthEpilogue(monthKey) {
+  const lines = getMonthEpilogue(monthKey);
+  if (lines.length === 0) {
+    monthHeroEpilogueEl.classList.add('hidden');
+    monthHeroEpilogueEl.innerHTML = '';
+    return;
+  }
+  monthHeroEpilogueEl.innerHTML = '';
+  for (const line of lines) {
+    const p = document.createElement('p');
+    p.className = 'month-hero-epilogue-line';
+    p.textContent = line;
+    monthHeroEpilogueEl.appendChild(p);
+  }
+  monthHeroEpilogueEl.classList.remove('hidden');
 }
 
 // ----- 子渲染:Hero 文案 -----

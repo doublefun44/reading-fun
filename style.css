@@ -1538,6 +1538,19 @@ h1 {
   font-size: 1.1rem;
 }
 
+/* Stage 11:hero 下方的尾句,小号低透明度,安静收尾 */
+.month-hero-epilogue {
+  margin-top: 1rem;
+}
+.month-hero-epilogue-line {
+  font-size: 0.9rem;
+  font-weight: 300;
+  opacity: 0.55;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
 /* ----- Section 通用 ----- */
 .month-section {
   margin-bottom: 2rem;
