@@ -34,42 +34,50 @@
       <div class="streak-ring-number" id="streakRingNumber">0</div>
       <div class="streak-ring-label" id="streakRingLabel">连续</div>
     </div>
-    <!-- Stage 9:书童(守火人),坐在环右下角外侧,面朝火 -->
-    <svg id="attendant" class="attendant" data-state="asleep" viewBox="0 0 100 110" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <!-- 精神:坐直,眼睛圆点 -->
-      <g class="pose pose-awake" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="46" cy="30" r="13"/>
-        <circle cx="40" cy="27" r="1.6" fill="currentColor" stroke="none"/>
-        <circle cx="48" cy="27" r="1.6" fill="currentColor" stroke="none"/>
-        <path d="M39 42 C29 50 23 66 25 84 C39 91 55 91 61 84 C63 66 59 50 53 42"/>
-        <path d="M33 68 Q46 76 57 68"/>
+    <!-- Stage 9:书童(守火人)+ 他守的蜡烛,坐在环右下角外侧 -->
+    <svg id="attendant" class="attendant" data-state="asleep" viewBox="0 0 130 110" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <!-- 地平线 -->
+      <path class="ground" d="M4 97 H126"/>
+      <!-- 蜡烛:烛身固定,火苗随状态换 -->
+      <rect x="99" y="78" width="14" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="3.5"/>
+      <path class="flame flame-awake"  d="M106 75 C101 67 101 58 106 49 C111 58 111 67 106 75 Z"/>
+      <path class="flame flame-calm"   d="M106 75 C102 69 102 62 106 55 C110 62 110 69 106 75 Z"/>
+      <path class="flame flame-drowsy" d="M106 76 C104 71 104 67 106 62 C108 67 108 71 106 76 Z"/>
+      <circle class="flame flame-asleep" cx="106" cy="69" r="3.2"/>
+      <!-- 精神:坐直,大圆点眼 -->
+      <g class="pose pose-awake" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="8" y="85" width="40" height="11" rx="5.5"/>
+        <path d="M48 95 V72 Q48 50 64 50 Q80 50 80 72 V95"/>
+        <circle cx="64" cy="35" r="15"/>
+        <circle cx="58" cy="33" r="2.2" fill="currentColor" stroke="none"/>
+        <circle cx="69" cy="33" r="2.2" fill="currentColor" stroke="none"/>
       </g>
-      <!-- 平静:正常坐姿,眼睛略小 -->
-      <g class="pose pose-calm" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="46" cy="30" r="13"/>
-        <circle cx="40" cy="28" r="1.1" fill="currentColor" stroke="none"/>
-        <circle cx="48" cy="28" r="1.1" fill="currentColor" stroke="none"/>
-        <path d="M39 42 C29 50 23 66 25 84 C39 91 55 91 61 84 C63 66 59 50 53 42"/>
-        <path d="M33 68 Q46 76 57 68"/>
+      <!-- 平静:同姿,眼睛略小 -->
+      <g class="pose pose-calm" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="8" y="85" width="40" height="11" rx="5.5"/>
+        <path d="M48 95 V72 Q48 50 64 50 Q80 50 80 72 V95"/>
+        <circle cx="64" cy="35" r="15"/>
+        <circle cx="58" cy="34" r="1.4" fill="currentColor" stroke="none"/>
+        <circle cx="69" cy="34" r="1.4" fill="currentColor" stroke="none"/>
       </g>
-      <!-- 犯困:头前倾,眼睛半闭横线 -->
-      <g class="pose pose-drowsy" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="42" cy="36" r="13"/>
-        <path d="M35 36 h6"/>
-        <path d="M45 37 h6"/>
-        <path d="M37 48 C28 55 23 68 25 85 C39 92 55 92 61 85 C62 68 58 54 51 48"/>
-        <path d="M33 70 Q45 77 56 70"/>
-        <text class="zz" x="56" y="24">z</text>
+      <!-- 犯困:头前倾,眼睛半闭横线,1 个 z -->
+      <g class="pose pose-drowsy" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="8" y="85" width="40" height="11" rx="5.5"/>
+        <path d="M46 95 V72 Q46 55 58 52 Q74 49 78 71 V95"/>
+        <circle cx="54" cy="39" r="15"/>
+        <path d="M46 38 l8 1"/>
+        <path d="M58 39 l8 1"/>
+        <text class="zz" x="70" y="20">z</text>
       </g>
-      <!-- 睡着:趴伏,眼睛闭合 -->
-      <g class="pose pose-asleep" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="36" cy="52" r="12"/>
-        <path d="M30 52 q3 2.5 6 0"/>
-        <path d="M40 52 q3 2.5 6 0"/>
-        <path d="M34 63 C22 67 16 77 18 88 C36 95 60 94 68 86 C69 75 61 65 50 61"/>
-        <text class="zz zz-s" x="48" y="44">z</text>
-        <text class="zz zz-m" x="56" y="34">z</text>
-        <text class="zz zz-l" x="65" y="23">z</text>
+      <!-- 睡着:趴伏,头枕在垫上,3 个 z -->
+      <g class="pose pose-asleep" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="8" y="85" width="40" height="11" rx="5.5"/>
+        <circle cx="26" cy="74" r="14"/>
+        <path d="M19 74 h9"/>
+        <path d="M40 95 C44 70 56 62 66 64 C80 67 86 80 86 95"/>
+        <text class="zz zz-s" x="50" y="50">z</text>
+        <text class="zz zz-m" x="58" y="38">z</text>
+        <text class="zz zz-l" x="66" y="26">z</text>
       </g>
     </svg>
   </div>
@@ -184,15 +192,24 @@
   <use href="#bottomGlassShape" fill="none" stroke="rgba(234,234,234,0.25)" stroke-width="1" />
 </svg>
 
-  <!-- Stage 9:陪读书童,低头读书姿态 -->
+  <!-- Stage 9:陪读书童,在桌边低头读书 -->
   <svg id="attendantReading" class="attendant-reading" viewBox="0 0 100 110" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-    <g class="pose pose-reading" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="44" cy="33" r="13"/>
-      <path d="M37 37 h5"/>
-      <path d="M46 38 h5"/>
-      <path d="M37 45 C28 52 23 67 25 84 C39 91 55 91 61 84 C62 68 58 52 51 45"/>
-      <path d="M28 66 L42 61 L56 66"/>
-      <path d="M42 61 v8"/>
+    <path class="ground" d="M4 97 H96"/>
+    <g class="pose pose-reading" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <!-- 矮桌:桌板 + 两条腿,摊开的书放在桌上 -->
+      <rect x="6" y="72" width="42" height="7" rx="3.5"/>
+      <path d="M12 79 V96"/>
+      <path d="M42 79 V96"/>
+      <path d="M14 70 L26 65 L38 70"/>
+      <path d="M26 65 v5"/>
+      <!-- 小人:坐在桌后,头低向书,手臂搭到桌边 -->
+      <g class="figure">
+        <path d="M54 96 V78 Q54 62 66 59 Q80 56 84 78 V96"/>
+        <circle cx="60" cy="46" r="14"/>
+        <path d="M49 49 l6 1"/>
+        <path d="M58 50 l6 1"/>
+        <path d="M54 82 Q44 80 38 74"/>
+      </g>
     </g>
   </svg>
   </div>
