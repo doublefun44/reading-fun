@@ -604,6 +604,62 @@ h1 {
   padding: 0.875rem;
 }
 
+/* ===== Stage 10:告别信 ===== */
+/* 信是全屏静场:遮罩铺满、更深的底色,不用卡片 */
+.farewell-letter {
+  background: rgba(15, 15, 26, 0.96);
+}
+
+.farewell-letter-content {
+  width: 100%;
+  max-width: 420px;
+  padding: 2rem 2rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  animation: recapFadeIn 0.6s ease-out;
+}
+
+.farewell-letter-line {
+  font-size: 1.2rem;
+  font-weight: 300;
+  line-height: 1.9;
+  letter-spacing: 0.03em;
+  text-align: left;
+  margin: 0 0 1.4rem;
+}
+.farewell-letter-line:last-child {
+  margin-bottom: 0;
+}
+
+.farewell-letter-close {
+  align-self: center;
+  font-size: 1rem;
+  opacity: 0.6;
+  padding: 0.75rem 2rem;
+}
+
+/* 右下角的巴哥装饰:纯静态,"合上"按钮上方 */
+.letter-pug {
+  width: 38px;
+  height: auto;
+  align-self: flex-end;
+  margin: -1rem 0 -1.25rem;  /* 收紧列间距,让它贴近按钮上方 */
+}
+
+/* 详情页的信入口:安静的一行字 */
+.detail-letter-entry {
+  display: block;
+  margin: 0 auto 1.25rem;
+  opacity: 0.65;
+}
+
+/* 结算页完读层里的信入口 */
+.recap-letter-entry {
+  margin-top: 0.5rem;
+  opacity: 0.65;
+}
+
 /* ===== 首页 Streak 环 ===== */
 #listView {
   display: flex;

@@ -36,6 +36,7 @@ const recapStreakMain = document.getElementById('recapStreakMain');
 const recapStreakSub = document.getElementById('recapStreakSub');
 const recapFinishLayer = document.getElementById('recapFinishLayer');
 const recapFinishBookEl = document.getElementById('recapFinishBook');
+const recapLetterEntryEl = document.getElementById('recapLetterEntry');
 const recapNextLayer = document.getElementById('recapNextLayer');
 const saveProgressBtn = document.getElementById('saveProgressBtn');
 const skipProgressBtn = document.getElementById('skipProgressBtn');
@@ -81,6 +82,10 @@ const detailTotalTimeEl = document.getElementById('detailTotalTime');
 const detailSessionCountEl = document.getElementById('detailSessionCount');
 const detailAbandonReasonEl = document.getElementById('detailAbandonReason');
 const detailFinishedNoteEl = document.getElementById('detailFinishedNote');
+const detailLetterEntryEl = document.getElementById('detailLetterEntry');
+const farewellLetterEl = document.getElementById('farewellLetter');
+const farewellLetterBodyEl = document.getElementById('farewellLetterBody');
+const farewellLetterCloseBtn = document.getElementById('farewellLetterCloseBtn');
 const detailActionsEl = document.getElementById('detailActions');
 const detailSessionsEl = document.getElementById('detailSessions');
 
@@ -358,6 +363,58 @@ function getAttendantState() {
   if (days === 1) return 'calm';
   if (days === 2) return 'drowsy';
   return 'asleep';
+}
+
+// Stage 10:告别信。内容每次从 sessions 实时计算,不存文本
+// 返回 string[](每句一个元素);该书没有任何 session 返回 null
+function getFarewellLetter(book) {
+  const sessions = storage.getSessions().filter(s => s.bookId === book.id);
+  if (sessions.length === 0) return null;
+
+  // 去重后的本地阅读日,升序
+  const dayKeys = [...new Set(
+    sessions.map(s => new Date(s.startTime).toLocaleDateString('sv'))
+  )].sort();
+  const dayCount = dayKeys.length;
+  const first = new Date(dayKeys[0] + 'T00:00:00');
+  const last = new Date(dayKeys[dayKeys.length - 1] + 'T00:00:00');
+
+  const lines = [];
+  lines.push(`《${book.title}》读完了。`);
+
+  // 陪伴句:同月 / 同年跨月 / 跨年 三种说法
+  const CN_MONTHS = ['一月', '二月', '三月', '四月', '五月', '六月',
+                     '七月', '八月', '九月', '十月', '十一月', '十二月'];
+  const sameMonth = first.getFullYear() === last.getFullYear()
+    && first.getMonth() === last.getMonth();
+  if (sameMonth) {
+    // 读信的当下还在那个月说"这个月",否则说"那段时间"
+    const now = new Date();
+    const stillThatMonth = now.getFullYear() === first.getFullYear()
+      && now.getMonth() === first.getMonth();
+    lines.push(stillThatMonth
+      ? `这个月,它陪伴你度过了 ${dayCount} 天。`
+      : `那段时间,它陪伴你度过了 ${dayCount} 天。`);
+  } else if (first.getFullYear() === last.getFullYear()) {
+    lines.push(`它陪了你 ${dayCount} 天,从${CN_MONTHS[first.getMonth()]}走到${CN_MONTHS[last.getMonth()]}。`);
+  } else {
+    lines.push(`它陪了你 ${dayCount} 天,从 ${first.getFullYear()} 年 ${first.getMonth() + 1} 月走到 ${last.getFullYear()} 年 ${last.getMonth() + 1} 月。`);
+  }
+
+  // 停顿句:相邻阅读日之间完全没读的天数,最长的一次 ≥7 天才出现
+  let maxPause = 0;
+  for (let i = 1; i < dayKeys.length; i++) {
+    const prev = new Date(dayKeys[i - 1] + 'T00:00:00');
+    const cur = new Date(dayKeys[i] + 'T00:00:00');
+    const gap = Math.round((cur - prev) / 86400000) - 1;
+    if (gap > maxPause) maxPause = gap;
+  }
+  if (maxPause >= 7) {
+    lines.push(`中间有过一次 ${maxPause} 天的停顿,你还是回来了。`);
+  }
+
+  lines.push('合上书,道个别吧。');
+  return lines;
 }
 
 function renderStreakRing() {
@@ -926,6 +983,27 @@ function closeBookDetail() {
 }
 
 
+// Stage 10:打开全屏告别信。内容实时算,书名用 textContent 防注入
+function openFarewellLetter(book) {
+  const lines = getFarewellLetter(book);
+  if (!lines) return;
+
+  farewellLetterBodyEl.innerHTML = '';
+  for (const line of lines) {
+    const p = document.createElement('p');
+    p.className = 'farewell-letter-line';
+    p.textContent = line;
+    farewellLetterBodyEl.appendChild(p);
+  }
+  farewellLetterEl.classList.remove('hidden');
+}
+
+function closeFarewellLetter() {
+  farewellLetterEl.classList.add('hidden');
+}
+
+farewellLetterCloseBtn.addEventListener('click', closeFarewellLetter);
+
 function renderBookDetail() {
   const book = storage.getBooks().find(b => b.id === currentDetailBookId);
   if (!book) {
@@ -968,6 +1046,15 @@ function renderBookDetail() {
     detailFinishedNoteEl.textContent = `${formatFinishedDate(book.finishedAt)},你读完了这本书。`;
   } else {
     detailFinishedNoteEl.classList.add('hidden');
+  }
+
+  // Stage 10:告别信入口,仅完读且有阅读记录的书显示
+  if (book.status === 'finished' && sessions.length > 0) {
+    detailLetterEntryEl.classList.remove('hidden');
+    detailLetterEntryEl.onclick = () => openFarewellLetter(book);
+  } else {
+    detailLetterEntryEl.classList.add('hidden');
+    detailLetterEntryEl.onclick = null;
   }
 
   // 操作按钮
@@ -1792,7 +1879,7 @@ function saveProgress() {
     storage.saveBooks(books);
   }
 
-  playRecapSequence({ justFinished, bookTitle: book ? book.title : '' });
+  playRecapSequence({ justFinished, bookTitle: book ? book.title : '', book });
 }
 
 function skipProgress() {
@@ -1802,7 +1889,7 @@ function skipProgress() {
 }
 
 // 播放结算页后续层(today → streak → finish?)的依次淡入
-function playRecapSequence({ justFinished, bookTitle }) {
+function playRecapSequence({ justFinished, bookTitle, book }) {
   // 切换底部按钮:跳过/完成 → 单个"继续"
   setRecapButtonsToContinue();
   // 锁住进度输入,免得展示期间被改
@@ -1816,7 +1903,7 @@ function playRecapSequence({ justFinished, bookTitle }) {
 
   // 第四层:只在跨过 100% 完读时出
   if (justFinished) {
-    setTimeout(() => showFinishLayer(bookTitle), 1500);
+    setTimeout(() => showFinishLayer(bookTitle, book), 1500);
     // 第五层:下一本建议(finish 层之后再 +1500ms)
     // showNextLayer 内部会 getNextBookSuggestion,没匹配上就静默不显示
     setTimeout(showNextLayer, 1500 + 1500);
@@ -1881,9 +1968,19 @@ function showStreakLayer() {
 }
 
 // 第四层:完读庆祝
-function showFinishLayer(bookTitle) {
+function showFinishLayer(bookTitle, book) {
   if (!pendingRecap) return;
   recapFinishBookEl.textContent = bookTitle ? `《${bookTitle}》` : '';
+
+  // Stage 10:告别信入口,有信才显示;合上后回到结算页,流程照常
+  if (book && getFarewellLetter(book)) {
+    recapLetterEntryEl.classList.remove('hidden');
+    recapLetterEntryEl.onclick = () => openFarewellLetter(book);
+  } else {
+    recapLetterEntryEl.classList.add('hidden');
+    recapLetterEntryEl.onclick = null;
+  }
+
   recapFinishLayer.classList.remove('hidden');
   recapFinishLayer.style.animation = 'recapFadeIn 0.6s ease-out';
 }

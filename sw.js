@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pageember-v4';
+const CACHE_NAME = 'pageember-v5';
 const ASSETS = [
   './',
   './index.html',

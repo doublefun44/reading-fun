@@ -255,6 +255,8 @@
   <div class="recap-finish-icon"></div>
   <div class="recap-finish-main">读完了</div>
   <div class="recap-finish-book" id="recapFinishBook"></div>
+  <!-- Stage 10:告别信入口,有信才显示 -->
+  <button class="btn-text recap-letter-entry hidden" id="recapLetterEntry">这本书给你留了一封信 💌</button>
 </div>
 
   <!-- 第五层:下一本建议(只在完读后,且 getNextBookSuggestion 命中至少一条时出现) -->
@@ -308,7 +310,9 @@
   <div class="detail-abandon-reason hidden" id="detailAbandonReason"></div>
   <div class="detail-finished-note hidden" id="detailFinishedNote"></div>
 
-  <div class="detail-finished-note hidden" id="detailFinishedNote"></div>
+  <!-- Stage 10:告别信入口(仅完读且有阅读记录的书显示) -->
+  <button class="btn-text detail-letter-entry hidden" id="detailLetterEntry">重新翻出这封信 💌</button>
+
   <div class="detail-actions" id="detailActions"></div>
 
   <h3 class="section-title detail-sessions-title">阅读记录</h3>
@@ -472,6 +476,28 @@
       <div class="recap-finish-main">读完了</div>
       <div class="recap-finish-book" id="finishCelebrationBook"></div>
       <button id="finishCelebrationOkBtn" class="btn btn-primary finish-celebration-btn">继续</button>
+    </div>
+  </div>
+
+  <!-- Stage 10:告别信全屏层 -->
+  <div id="farewellLetter" class="modal farewell-letter hidden">
+    <div class="farewell-letter-content">
+      <div class="farewell-letter-body" id="farewellLetterBody"></div>
+      <!-- 金色巴哥趴在书堆上,右下角装饰(原样内嵌,勿改路径) -->
+      <svg class="letter-pug" viewBox="0 0 100 132" xmlns="http://www.w3.org/2000/svg">
+        <text x="50" y="118" text-anchor="middle" font-size="64">📚</text>
+        <path d="M50 10 C25 10 12 28 12 50 C12 72 28 88 50 88 C72 88 88 72 88 50 C88 28 75 10 50 10Z" fill="#fbbf24"/>
+        <path d="M18 35 C10 25 14 12 22 18 C26 22 22 35 18 35Z" fill="#160f36" opacity="0.4"/>
+        <path d="M82 35 C90 25 86 12 78 18 C74 22 78 35 82 35Z" fill="#160f36" opacity="0.4"/>
+        <path d="M36 30 Q40 26 44 30" stroke="#160f36" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4"/>
+        <path d="M56 30 Q60 26 64 30" stroke="#160f36" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4"/>
+        <path d="M29 46 Q36 52 43 46" stroke="#160f36" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M57 46 Q64 52 71 46" stroke="#160f36" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="50" cy="64" rx="20" ry="15" fill="#160f36" opacity="0.15"/>
+        <path d="M42 60 Q50 56 58 60 Q54 68 46 68 Z" fill="#160f36"/>
+        <path d="M40 72 Q50 80 60 72" stroke="#160f36" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <button id="farewellLetterCloseBtn" class="btn-text farewell-letter-close">合上 📜</button>
     </div>
   </div>
 
