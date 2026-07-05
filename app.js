@@ -53,6 +53,8 @@ const streakRingEl = document.getElementById('streakRing');
 const streakRingNumberEl = document.getElementById('streakRingNumber');
 const streakRingLabelEl = document.getElementById('streakRingLabel');
 const streakRingHintEl = document.getElementById('streakRingHint');
+const attendantEl = document.getElementById('attendant');
+const attendantReadingEl = document.getElementById('attendantReading');
 const startReadingBtn = document.getElementById('startReadingBtn');
 const manageBooksBtn = document.getElementById('manageBooksBtn');
 
@@ -336,6 +338,28 @@ function playExtinguishAnimation() {
   }, 1600);
 }
 
+// Stage 9:书童状态,由"距最近一次 session 多少个日历日"驱动
+// 0 天 awake / 1 天 calm / 2 天 drowsy / ≥3 天或无记录 asleep
+function getAttendantState() {
+  const sessions = storage.getSessions();
+  if (sessions.length === 0) return 'asleep';
+
+  const latest = sessions.reduce(
+    (max, s) => (s.startTime > max ? s.startTime : max),
+    sessions[0].startTime
+  );
+  const lastKey = new Date(latest).toLocaleDateString('sv');
+  const todayKey = new Date().toLocaleDateString('sv');
+  const days = Math.round(
+    (new Date(todayKey + 'T00:00:00') - new Date(lastKey + 'T00:00:00')) / (24 * 60 * 60 * 1000)
+  );
+
+  if (days <= 0) return 'awake';
+  if (days === 1) return 'calm';
+  if (days === 2) return 'drowsy';
+  return 'asleep';
+}
+
 function renderStreakRing() {
   const streak = calcStreak();
   const todayMs = getTodayMs(currentSession);
@@ -476,9 +500,15 @@ function formatSessionTime(ts) {
 }
 
 
+// Stage 9:首页书童,姿态跟随 getAttendantState()
+function renderAttendant() {
+  attendantEl.dataset.state = getAttendantState();
+}
+
 // ===== 顶层渲染 =====
 function renderBooks() {
   renderStreakRing();
+  renderAttendant();
   renderSessionHistory();
   renderExportHint();
 }
@@ -1384,6 +1414,16 @@ function renderHourglass() {
   function startSession(bookId) {
   const book = storage.getBooks().find(b => b.id === bookId);
   if (!book) return;
+
+  // Stage 9:醒来过渡——开始计时时书童还在犯困/睡着,就在陪读位上播一段醒来动画
+  // 状态要在这里取:session 到 stop 时才落库,此刻还是"没读"的旧状态
+  const attendantState = getAttendantState();
+  if (attendantState === 'drowsy' || attendantState === 'asleep') {
+    attendantReadingEl.classList.add('is-waking');
+    attendantReadingEl.addEventListener('animationend', () => {
+      attendantReadingEl.classList.remove('is-waking');
+    }, { once: true });
+  }
 
   currentSession = { bookId, startTime: Date.now() };
 
