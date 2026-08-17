@@ -1015,6 +1015,9 @@ h1 {
   opacity: 0.5;
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
+  /* 页数模式是"第105页/共500页",中文会逐字断行,不锁住会被长书名压成两行 */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .book-picker-empty {
@@ -1247,6 +1250,8 @@ h1 {
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
   margin-left: 1rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .manage-empty {

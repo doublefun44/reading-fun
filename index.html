@@ -233,7 +233,8 @@
         max="100"
         inputmode="numeric"
       >
-      <span class="recap-percent-unit">%</span>
+      <!-- 页数模式下这里会变成 "/ 500页" -->
+      <span class="recap-percent-unit" id="recapPercentUnit">%</span>
     </div>
   </div>
 
@@ -526,8 +527,14 @@
   <input type="text" id="bookTranslator" placeholder="选填,如果是译作">
 </label>
       <label id="bookPercentField">
-        当前进度(%)
+        <!-- 填了总页数后,这行会变成"当前页码",输入框的 max/placeholder 一起换 -->
+        <span id="bookPercentLabel">当前进度(%)</span>
         <input type="number" id="bookPercent" min="0" max="100" value="0">
+      </label>
+      <!-- 总页数有值 = 这本书进页数模式(纸质书);留空 = Kindle 模式(百分比) -->
+      <label id="bookTotalPagesField">
+        总页数
+        <input type="number" id="bookTotalPages" min="1" placeholder="选填,纸质书用">
       </label>
       <div class="modal-actions">
         <button id="cancelBookBtn" class="btn btn-secondary">取消</button>

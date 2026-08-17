@@ -44,7 +44,7 @@ const storage = {
 };
 
 // 数据 schema 当前版本号。改字段了就 +1,并在 normalizeBook/Session 里加迁移
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 // 把任何来源(老数据 / 当前数据 / 未来数据)的 book 规整到当前 schema
 // 缺的字段补默认,多的字段直接保留(对未来字段宽容)
@@ -63,6 +63,10 @@ function normalizeBook(b) {
     finishedAt: typeof b.finishedAt === 'number' ? b.finishedAt
             : (b.percent >= 100 ? (b.createdAt || Date.now()) : null),
     abandonReason: b.abandonReason || null,
+    // 纸质书页数追踪:totalPages 有值 = 页数模式,null = Kindle 模式(百分比)
+    // percent 仍是唯一的内部进度表示,这两个字段只服务输入/显示
+    totalPages: (typeof b.totalPages === 'number' && b.totalPages > 0) ? b.totalPages : null,
+    currentPage: (typeof b.currentPage === 'number' && b.currentPage >= 0) ? b.currentPage : null,
     createdAt: typeof b.createdAt === 'number' ? b.createdAt : Date.now(),
     // 仅 wishlist 状态有真实时间戳,其他状态统一 null
     // 兜底链:b.addedToWishlistAt → b.createdAt → Date.now()

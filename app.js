@@ -15,6 +15,9 @@ const bookAuthorInput = document.getElementById('bookAuthor');
 const bookTranslatorInput = document.getElementById('bookTranslator');
 const bookPercentInput = document.getElementById('bookPercent');
 const bookPercentField = document.getElementById('bookPercentField');
+const bookPercentLabel = document.getElementById('bookPercentLabel');
+const bookTotalPagesInput = document.getElementById('bookTotalPages');
+const bookTotalPagesField = document.getElementById('bookTotalPagesField');
 const saveBookBtn = document.getElementById('saveBookBtn');
 const cancelBookBtn = document.getElementById('cancelBookBtn');
 const bookTitleHint = document.getElementById('bookTitleHint');
@@ -27,6 +30,7 @@ const recapDurationEl = document.getElementById('recapDuration');
 const recapBookEl = document.getElementById('recapBook');
 const recapPercentBeforeEl = document.getElementById('recapPercentBefore');
 const recapPercentAfterInput = document.getElementById('recapPercentAfter');
+const recapPercentUnitEl = document.getElementById('recapPercentUnit');
 const recapTodayLayer = document.getElementById('recapTodayLayer');
 const recapTodayTextEl = document.getElementById('recapTodayText');
 const recapTodayMilestoneEl = document.getElementById('recapTodayMilestone');
@@ -125,6 +129,23 @@ let selectedAbandonReason = null;
 // 结算页用:进 stopSession 时快照下来,saveProgress 时用
 let pendingRecap = null;  // { session, todayMsBefore, percentBefore }
 
+// ===== 页数 ⇄ 百分比 =====
+// 页数模式的唯一换算口。percent 仍是内部唯一进度表示,页码只是输入/显示层。
+// 特意压住 99:500 页的书读到 498 页,四舍五入就是 100,会误触发完读庆祝和告别信。
+// 只有真读到最后一页才算读完。
+function pagesToPercent(page, totalPages) {
+  if (!(totalPages > 0)) return 0;
+  if (page >= totalPages) return 100;
+  return Math.min(99, Math.round(page / totalPages * 100));
+}
+
+// 进度文案:页数模式的书显示 "第X页/共Y页",其余显示 "XX%"
+function formatBookProgress(book) {
+  return book.totalPages
+    ? `第${book.currentPage || 0}页/共${book.totalPages}页`
+    : `${book.percent}%`;
+}
+
 // ===== View 切换收口 =====
 // 5 个 section + 顶部 header 的显隐统一走这里,免得各处散写 .hidden
 // header 只在 list 视图可见
@@ -188,7 +209,7 @@ function renderBookPicker() {
   bookPickerListEl.innerHTML = sorted.map(book => `
     <button class="book-picker-item" data-book-id="${book.id}">
       <span class="book-picker-title">${book.title}</span>
-      <span class="book-picker-percent">${book.percent}%</span>
+      <span class="book-picker-percent">${formatBookProgress(book)}</span>
     </button>
   `).join('');
 
@@ -818,7 +839,7 @@ function renderManageGroup(title, books, statsByBook) {
               <span class="manage-book-title">${b.title}</span>
               <span class="manage-book-stats">${subText}</span>
             </div>
-            <span class="manage-book-percent">${b.percent}%</span>
+            <span class="manage-book-percent">${formatBookProgress(b)}</span>
           </div>
         `;
       }).join('')}
@@ -1027,7 +1048,7 @@ function renderBookDetail() {
     .sort((a, b) => b.startTime - a.startTime);
   const totalMs = sessions.reduce((sum, s) => sum + s.duration, 0);
 
-  detailPercentEl.textContent = `${book.percent}%`;
+  detailPercentEl.textContent = formatBookProgress(book);
   detailTotalTimeEl.textContent = totalMs > 0 ? formatDuration(totalMs) : '—';
   detailSessionCountEl.textContent = sessions.length;
 
@@ -1123,6 +1144,8 @@ function handleFinishFromDetail(bookId) {
   // 详情页按钮 = 用户明确说"读完了",拉到 100
   // 即便用户之前停在 87%,现在按完读就是 100%
   if (book.percent < 100) book.percent = 100;
+  // 页数模式:页码得跟着走到最后一页,否则列表里会显示"第120页/共500页"却标着已完读
+  if (book.totalPages) book.currentPage = book.totalPages;
   // 如果之前是弃读,清掉弃读原因
   book.abandonReason = null;
 
@@ -1140,6 +1163,8 @@ function handleRestartReading(bookId) {
   // 完读重启 → 进度清零(再读一遍);弃读重启 → percent 保留(60% 弃读还是 60%)
   if (book.status === 'finished') {
     book.percent = 0;
+    // 页数模式:percent 清零了,页码也得跟着回到第 0 页
+    if (book.totalPages) book.currentPage = 0;
   }
 
   book.status = 'reading';
@@ -1596,10 +1621,21 @@ function stopSession() {
 
   recapDurationEl.textContent = formatDuration(duration);
   recapBookEl.textContent = `《${book.title}》`;
-  recapPercentBeforeEl.textContent = `${book.percent}`;
   recapPercentAfterInput.value = '';
-  recapPercentAfterInput.placeholder = book.percent;
   recapPercentAfterInput.disabled = false;
+  if (book.totalPages) {
+    // 页数模式:这一行收的是页码,不是百分比
+    const pageBefore = book.currentPage || 0;
+    recapPercentBeforeEl.textContent = `${pageBefore}`;
+    recapPercentAfterInput.placeholder = pageBefore;
+    recapPercentAfterInput.max = book.totalPages;
+    recapPercentUnitEl.textContent = `/ ${book.totalPages}页`;
+  } else {
+    recapPercentBeforeEl.textContent = `${book.percent}`;
+    recapPercentAfterInput.placeholder = book.percent;
+    recapPercentAfterInput.max = 100;
+    recapPercentUnitEl.textContent = '%';
+  }
 
   setActiveView('progress');
 
@@ -1631,6 +1667,16 @@ function deleteBook(bookId) {
 // wishlist 写入上限。导入旧备份不受这条限制(宽进严出)。
 const WISHLIST_MAX = 10;
 
+// 总页数一填,"当前进度(%)" 就地变成 "当前页码"。
+// 总页数是判定页数模式的唯一依据,不另开 trackingMode 字段。
+function syncBookModalMode() {
+  const totalPages = Number(bookTotalPagesInput.value);
+  const isPageMode = totalPages > 0;
+  bookPercentLabel.textContent = isPageMode ? '当前页码' : '当前进度(%)';
+  bookPercentInput.max = isPageMode ? String(totalPages) : '100';
+  bookPercentInput.placeholder = isPageMode ? '0' : '';
+}
+
 // 读取当前选中的意图:'reading' | 'wishlist'
 function getCurrentIntent() {
   const active = bookIntentSegmented.querySelector('.modal-segmented-option.is-active');
@@ -1643,13 +1689,13 @@ function setIntent(intent) {
   bookIntentSegmented.querySelectorAll('.modal-segmented-option').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.intent === intent);
   });
-  if (intent === 'wishlist') {
-    bookPercentField.classList.add('hidden');
-    bookPercentInput.value = '0';
-  } else {
-    bookPercentField.classList.remove('hidden');
-    bookPercentInput.value = '0';
-  }
+  // 想读的书不需要进度,总页数同理:两个字段一起藏、一起清
+  const isWishlist = intent === 'wishlist';
+  bookPercentField.classList.toggle('hidden', isWishlist);
+  bookTotalPagesField.classList.toggle('hidden', isWishlist);
+  bookPercentInput.value = '0';
+  bookTotalPagesInput.value = '';
+  syncBookModalMode();
   // 切意图时清掉之前的查重提示和次级按钮——因为查重判定可能已经变了
   hideTitleHint();
   hideSecondaryActions();
@@ -1668,6 +1714,8 @@ function closeModal() {
   bookAuthorInput.value = '';
   bookTranslatorInput.value = '';
   bookPercentInput.value = '0';
+  bookTotalPagesInput.value = '';
+  syncBookModalMode();
   hideTitleHint();
   hideSecondaryActions();
   // 保存按钮可能被"看想读"顶替过,复位
@@ -1754,6 +1802,8 @@ function saveBook() {
       abandonReason: null,
       addedToWishlistAt: Date.now(),
       createdAt: Date.now(),
+      totalPages: null,
+      currentPage: null,
     };
     const books = storage.getBooks();
     books.push(newBook);
@@ -1765,7 +1815,22 @@ function saveBook() {
   }
 
   // intent === 'reading':保留原有 reading/finished 写入逻辑
-  const initialPercent = Number(bookPercentInput.value) || 0;
+  // 页数模式下,进度输入框里填的是页码,percent 由页码换算出来
+  const totalPagesRaw = Number(bookTotalPagesInput.value);
+  const totalPages = totalPagesRaw > 0 ? Math.round(totalPagesRaw) : null;
+  let currentPage = null;
+  let initialPercent;
+  if (totalPages) {
+    currentPage = Math.max(0, Number(bookPercentInput.value) || 0);
+    if (currentPage > totalPages) {
+      showTitleHint(`当前页码超过总页数了(共 ${totalPages} 页)`, 'block');
+      return;
+    }
+    initialPercent = pagesToPercent(currentPage, totalPages);
+  } else {
+    initialPercent = Number(bookPercentInput.value) || 0;
+  }
+
   const newBook = {
     id: uuid(),
     title,
@@ -1776,6 +1841,8 @@ function saveBook() {
     finishedAt: initialPercent >= 100 ? Date.now() : null,
     addedToWishlistAt: null,
     createdAt: Date.now(),
+    totalPages,
+    currentPage,
   };
 
   const books = storage.getBooks();
@@ -1865,9 +1932,26 @@ function saveProgress() {
   if (!pendingRecap) return;
 
   const raw = recapPercentAfterInput.value.trim();
+  // 快照里的书就是结算这本,totalPages 中途不可能被改
+  const totalPages = pendingRecap.book ? pendingRecap.book.totalPages : null;
 
   let percentAfter;
-  if (raw === '') {
+  let pageAfter = null;
+  if (totalPages) {
+    // 页数模式:输入框收页码,percent 由页码换算
+    const pageBefore = pendingRecap.book.currentPage || 0;
+    if (raw === '') {
+      pageAfter = pageBefore;
+    } else {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0 || n > totalPages) {
+        alert(`请输入 0-${totalPages} 之间的页码`);
+        return;
+      }
+      pageAfter = n;
+    }
+    percentAfter = pagesToPercent(pageAfter, totalPages);
+  } else if (raw === '') {
     percentAfter = pendingRecap.percentBefore;
   } else {
     const n = Number(raw);
@@ -1883,11 +1967,15 @@ function saveProgress() {
   const book = books.find(b => b.id === pendingProgressBookId);
   let justFinished = false;
 
-  if (book && percentAfter !== book.percent) {
+  // 页数模式下页码可能变了而 percent 没变(500 页的书从 100 翻到 102),也得写
+  const pageChanged = !!totalPages && book && pageAfter !== book.currentPage;
+
+  if (book && (percentAfter !== book.percent || pageChanged)) {
     const wasFinished = book.percent >= 100;
     const nowFinished = percentAfter >= 100;
 
     book.percent = percentAfter;
+    if (totalPages) book.currentPage = pageAfter;
 
     // 首次完读:盖时间戳 + 改状态
     if (!wasFinished && nowFinished) {
@@ -2092,6 +2180,8 @@ function closeFinishCelebration() {
 cancelBookBtn.addEventListener('click', closeModal);
 saveBookBtn.addEventListener('click', saveBook);
 stopBtn.addEventListener('click', stopSession);
+// 总页数一边输一边切换进度框的形态(百分比 ⇄ 页码)
+bookTotalPagesInput.addEventListener('input', syncBookModalMode);
 recapNextLayer.addEventListener('click', handleNextStartClick);
 // 用户改书名时,清掉之前的查重提示和次级动作按钮
 bookTitleInput.addEventListener('input', () => {
